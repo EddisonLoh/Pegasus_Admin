@@ -1,0 +1,56 @@
+<ion-content class="ion-padding">
+  <div class="pana-admin-title">
+    <h1>PANA ADMIN</h1>
+  </div>
+
+  <div class="content-container">
+    <ion-slides pager="true" [options]="slideOpts">
+      <ion-slide>
+        <ion-img src="../assets/imgs/main.svg"></ion-img>
+      </ion-slide>
+      <ion-slide>
+        <ion-img src="../assets/imgs/main1.svg"></ion-img>
+      </ion-slide>
+      <ion-slide>
+        <ion-img src="../assets/imgs/main2.svg"></ion-img>
+      </ion-slide>
+    </ion-slides>
+
+    <form [formGroup]="form">
+      <ion-item>
+        <ion-button class="country-code-btn" fill="clear" (click)="openCountrySearchModal()">
+          <ion-icon name="chevron-down-outline"></ion-icon>
+          {{ CountryCode || 'Select' }}
+        </ion-button>
+        <div id="sign-in-button"></div>
+        <ion-input
+          formControlName="phone"
+          placeholder="Mobile Number"
+          type="tel"
+          clearInput
+          minlength="10"
+          maxlength="10"
+          (ionFocus)="Show()"
+          (ionBlur)="Hide()">
+        </ion-input>
+      </ion-item>
+      <ion-text class="error" *ngIf="!form.get('phone').valid && form.get('phone').touched">
+        <p *ngIf="form.get('phone').hasError('required')">
+          Please enter the Mobile Number
+        </p>
+        <p *ngIf="form.get('phone').hasError('minlength') && !form.get('phone').hasError('required')">
+          Please enter a valid Mobile Number
+        </p>
+      </ion-text>
+      <ion-button expand="block" type="submit" [disabled]="!form.get('phone').valid" (click)="signIn()">
+        <span *ngIf="!approve2">Continue</span>
+        <ion-spinner *ngIf="approve2" name="crescent"></ion-spinner>
+      </ion-button>
+    </form>
+  </div>
+</ion-content>
+
+<ion-footer>
+  <!-- Add this at the end of your template -->
+  <div id="recaptcha-container"></div>
+</ion-footer>

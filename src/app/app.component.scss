@@ -1,0 +1,116 @@
+ion-menu {
+  --background: var(--ion-color-light);
+
+  .menu-content {
+    --background: var(--ion-color-light);
+    --padding-top: 0;
+    --padding-bottom: 16px;
+
+    .menu-header {
+      background: var(--ion-color-primary);
+      color: var(--ion-color-primary-contrast);
+      padding: 24px 16px;
+      display: flex;
+      align-items: center;
+
+      ion-avatar {
+        width: 60px;
+        height: 60px;
+        border: 2px solid var(--ion-color-primary-contrast);
+      }
+
+      .user-info {
+        margin-left: 16px;
+
+        h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        p {
+          margin: 4px 0 0;
+          font-size: 14px;
+          opacity: 0.8;
+        }
+      }
+    }
+
+    ion-list {
+      background: transparent;
+      padding: 16px 8px;
+
+      ion-item {
+        --background: transparent;
+        --background-hover: rgba(var(--ion-color-primary-rgb), 0.1);
+        --background-activated: rgba(var(--ion-color-primary-rgb), 0.2);
+        --padding-start: 16px;
+        --padding-end: 16px;
+        --border-radius: 8px;
+        margin-bottom: 4px;
+
+        &.selected {
+          --background: rgba(var(--ion-color-primary-rgb), 0.15);
+          font-weight: 500;
+        }
+
+        ion-icon {
+          color: var(--ion-color-primary);
+          margin-right: 16px;
+        }
+
+        ion-label {
+          font-size: 16px;
+        }
+      }
+
+      ion-list-header {
+        text-transform: uppercase;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        color: var(--ion-color-medium);
+        padding-top: 24px;
+        padding-bottom: 8px;
+      }
+    }
+  }
+
+  ion-footer {
+    ion-toolbar {
+      --background: transparent;
+      --min-height: 40px;
+
+      ion-title {
+        font-size: 12px;
+        color: var(--ion-color-medium);
+        text-align: center;
+      }
+    }
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  ion-menu {
+    --background: var(--ion-color-dark);
+
+    .menu-content {
+      --background: var(--ion-color-dark);
+
+      .menu-header {
+        background: var(--ion-color-primary-shade);
+      }
+
+      ion-list {
+        ion-item {
+          --background-hover: rgba(var(--ion-color-light-rgb), 0.1);
+          --background-activated: rgba(var(--ion-color-light-rgb), 0.2);
+
+          &.selected {
+            --background: rgba(var(--ion-color-light-rgb), 0.15);
+          }
+        }
+      }
+    }
+  }
+}

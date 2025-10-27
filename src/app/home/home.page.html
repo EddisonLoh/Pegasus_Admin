@@ -1,0 +1,88 @@
+   <!--menu button-->
+   <ion-header class="ion-no-border" [translucent]="true">
+    <ion-toolbar >
+      <ion-buttons slot="start">
+        <ion-menu-button color="primary"></ion-menu-button>
+      </ion-buttons>
+      <ion-title>Dashboard</ion-title>
+      <ion-buttons slot="end">
+        <ion-button color="primary" (click)="gotoProfile()">
+          <ion-icon name="person-circle-outline"></ion-icon>
+        </ion-button>
+        <ion-button color="primary">
+          <ion-icon name="notifications-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
+
+
+<!--Capacitor Google Map-->
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="dashboard-container">
+    <div class="dashboard-left">
+      <ion-card class="dashboard-card">
+        <ion-card-header>
+          <ion-card-subtitle>Total Earnings</ion-card-subtitle>
+          <ion-card-title>${{earnings || 0}}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <canvas #earningsChart></canvas>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="dashboard-card">
+        <ion-card-header>
+          <ion-card-subtitle>Drivers</ion-card-subtitle>
+          <ion-card-title>{{numDrivers || 0}}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <canvas #driversChart></canvas>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="dashboard-card">
+        <ion-card-header>
+          <ion-card-subtitle>Riders</ion-card-subtitle>
+          <ion-card-title>{{numRiders || 0}}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <canvas #ridersChart></canvas>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="dashboard-card">
+        <ion-card-header>
+          <ion-card-subtitle>Trips</ion-card-subtitle>
+          <ion-card-title>{{numTrips || 0}}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <canvas #tripsChart></canvas>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <div class="dashboard-right">
+      <ion-card class="map-card">
+        <ion-card-header>
+          <ion-card-subtitle>Live Map</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <capacitor-google-maps #map></capacitor-google-maps>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+</ion-content >
+
+
+
+
+  <ion-footer [translucent]="true" class="ion-no-border">
+
+    <!--location Button-->
+  
+
+    
+  </ion-footer>
