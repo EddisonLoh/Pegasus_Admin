@@ -1,15 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AvatarService } from './services/avatar.service';
 import { AuthService } from './services/auth.service';
-import { AlertController } from '@ionic/angular';
+import { AlertController, Platform, MenuController } from '@ionic/angular';
+import { filter } from 'rxjs/operators';
+import { NavigationEnd } from '@angular/router';
+import { Auth } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   public appPages = [
     { title: 'Dashboard', url: '/home', icon: 'home', color: 'primary' },
     { title: 'All Trips', url: '/history', icon: 'cellular', color: 'primary' },
@@ -24,12 +27,54 @@ export class AppComponent {
     { title: 'Driver App', url: '/driver-app', icon: 'phone-landscape', color: 'primary' },
   ];
 
+  isMenuCollapsed = false;
+  isMobile = false;
+  menuEnabled = false;
+
   constructor(
     public avatar: AvatarService,
     public router: Router,
     private authService: AuthService,
-    private alertController: AlertController
-  ) {}
+    private alertController: AlertController,
+    private platform: Platform,
+    private menuCtrl: MenuController,
+    private auth: Auth
+  ) {
+    this.isMobile = this.platform.is('mobile');
+  }
+
+  ngOnInit() {
+    // Handle initial navigation based on auth state
+    this.auth.onAuthStateChanged((user) => {
+      if (!user) {
+        this.router.navigate(['/login']);
+      } else {
+        // Check if we're at root route and redirect to home if authenticated
+        if (this.router.url === '/') {
+          this.router.navigate(['/home']);
+        }
+      }
+    });
+
+    // Handle menu visibility based on route data
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe(() => {
+      const currentRoute = this.router.routerState.snapshot.root;
+      this.menuEnabled = currentRoute.firstChild?.data?.['menuEnabled'] ?? false;
+      
+      // If we're at the root route, redirect to login
+      if (this.router.url === '/') {
+        this.router.navigate(['/login']);
+      }
+    });
+  }
+
+  async toggleMenu() {
+    this.isMenuCollapsed = !this.isMenuCollapsed;
+    const menus = await this.menuCtrl.getMenus();
+    menus[0]?.classList.toggle('menu-collapsed', this.isMenuCollapsed);
+  }
 
   gotoProfile() {
     this.router.navigateByUrl('/profile');

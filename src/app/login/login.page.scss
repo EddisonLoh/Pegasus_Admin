@@ -377,3 +377,103 @@ ion-button[type="submit"]:hover {
     font-weight: bold;
   }
 }
+
+form.modern-form {
+  max-width: 400px;
+  width: 90%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  ion-item {
+    --background: rgba(244, 245, 248, 0.8);
+    --border-radius: 12px;
+    --padding-start: 8px;
+    --padding-end: 8px;
+    margin-bottom: 16px;
+
+    .country-code-btn {
+      --background: var(--ion-color-primary-tint);
+      --color: var(--ion-color-primary);
+      --border-radius: 10px;
+      margin: 4px;
+      height: 90%;
+      font-weight: 600;
+      min-width: 90px;
+
+      ion-icon {
+        margin-right: 4px;
+        font-size: 18px;
+      }
+    }
+
+    .phone-input {
+      --padding-start: 12px;
+      font-size: 16px;
+      --background: transparent;
+    }
+
+    ion-input {
+      --placeholder-color: var(--ion-color-medium);
+      --color: var(--ion-color-dark);
+    }
+  }
+
+  .submit-button {
+    margin-top: 24px;
+    --border-radius: 12px;
+    --box-shadow: 0 4px 12px rgba(var(--ion-color-primary-rgb), 0.2);
+    height: 52px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    
+    ion-icon {
+      margin-right: 8px;
+    }
+
+    &:hover {
+      --box-shadow: 0 6px 16px rgba(var(--ion-color-primary-rgb), 0.3);
+    }
+
+    --color: var(--ion-color-light);
+    
+    span {
+      color: var(--ion-color-light);
+    }
+  }
+}
+
+// Add explicit text colors for all text elements
+.pana-admin-title {
+  h1 {
+    color: var(--ion-color-dark);
+  }
+}
+
+ion-text.error {
+  p {
+    color: var(--ion-color-danger);
+  }
+}
+
+// Ensure slide text is visible
+ion-slides {
+  ion-slide {
+    color: var(--ion-color-dark);
+  }
+}
+
+// Add dark text color to any form labels
+ion-label, 
+ion-text, 
+ion-input {
+  color: var(--ion-color-dark);
+}

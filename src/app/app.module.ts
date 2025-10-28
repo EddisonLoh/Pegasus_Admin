@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouteReuseStrategy } from '@angular/router';
 
@@ -29,6 +29,7 @@ import { DriverDocumentsComponent } from './driver-documents/driver-documents.co
 import { RiderComponent } from './rider/rider.component';
 import { CountrySearchModalComponent } from './country-search-modal/country-search-modal.component';
 import { AlertController } from '@ionic/angular';
+import { GlobalErrorHandler } from './global-error-handler';
 
 @NgModule({
   declarations: [AppComponent, CountrySearchModalComponent, OtpComponent, CartypeComponent, DocumentsComponent, PricesComponent, SupportComponent, DriverComponent, DriverDocumentsComponent, RiderComponent],
@@ -41,21 +42,59 @@ import { AlertController } from '@ionic/angular';
     HttpClientModule,
     IonicModule.forRoot(),
     AppRoutingModule,
-    provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideAuth(() => {
-      if (Capacitor.isNativePlatform()) {
-        return initializeAuth(getApp(), {
-          persistence: indexedDBLocalPersistence,
-        });
-      } else {
-        return getAuth();
+    provideFirebaseApp(() => {
+      try {
+        console.log('Initializing Firebase with config:', environment.firebase);
+        return initializeApp(environment.firebase);
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+        throw error;
       }
     }),
-    provideFirestore(() => getFirestore()),
-    provideStorage(() => getStorage()),
+    provideAuth(() => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          console.log('Initializing Auth for native platform');
+          return initializeAuth(getApp(), {
+            persistence: indexedDBLocalPersistence,
+          });
+        } else {
+          console.log('Initializing Auth for web platform');
+          return getAuth();
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        throw error;
+      }
+    }),
+    provideFirestore(() => {
+      try {
+        console.log('Initializing Firestore');
+        return getFirestore();
+      } catch (error) {
+        console.error('Firestore initialization error:', error);
+        throw error;
+      }
+    }),
+    provideStorage(() => {
+      try {
+        console.log('Initializing Storage');
+        return getStorage();
+      } catch (error) {
+        console.error('Storage initialization error:', error);
+        throw error;
+      }
+    }),
     BrowserAnimationsModule,
   ],
-  providers: [{ provide: RouteReuseStrategy, useClass: IonicRouteStrategy }, GoogleAuthProvider, FacebookAuthProvider, Client, AlertController],
+  providers: [
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy }, 
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    GoogleAuthProvider, 
+    FacebookAuthProvider, 
+    Client, 
+    AlertController
+  ],
   bootstrap: [AppComponent],
 })
 export class AppModule {}

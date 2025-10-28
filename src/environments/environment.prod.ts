@@ -5,14 +5,14 @@
 export const environment = {
     production: true,
     firebase: {
-      apiKey: 'AIzaSyC92Sr1Z7rwN94n-vTEOTgsQQ4LrRDleb0',
-      authDomain: 'radiotax-657bf.firebaseapp.com',
-      projectId: 'radiotax-657bf',
-      storageBucket: 'radiotax-657bf.appspot.com',
-      messagingSenderId: '930433753831',
-      appId: ''
+        apiKey: 'AIzaSyABhKckCLjTuk9KhrrVp9iIh-RLCY3CV94',
+        authDomain: 'shamride-ffbe6.firebaseapp.com',
+        projectId: 'shamride-ffbe6',
+        storageBucket: 'reboot-22979.appspot.com',
+        messagingSenderId: '187797802273',
+        appId: ''
     },
-    apiKey: 'AIzaSyC92Sr1Z7rwN94n-vTEOTgsQQ4LrRDleb0',
+    mapApiKey: 'AIzaSyBo7-gJUXqt25TEz7G-Gn6Ctdf7YsG54RY',
     onesignal: {
       appId: 'ba7d77ed-1525-416c-9ac5-7b5d36e68740',
       restApiKey: 'YTM3ODgyMzQtNjg1ZC00YTQwLWJmNjItNTA4M2VkMmY3MDdl',

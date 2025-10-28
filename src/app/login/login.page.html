@@ -16,11 +16,11 @@
       </ion-slide>
     </ion-slides>
 
-    <form [formGroup]="form">
+    <form [formGroup]="form" class="modern-form">
       <ion-item>
         <ion-button class="country-code-btn" fill="clear" (click)="openCountrySearchModal()">
-          <ion-icon name="chevron-down-outline"></ion-icon>
-          {{ CountryCode || 'Select' }}
+          <ion-icon name="globe-outline"></ion-icon>
+          {{ CountryCode || defaultCountryCode }}
         </ion-button>
         <div id="sign-in-button"></div>
         <ion-input
@@ -28,10 +28,10 @@
           placeholder="Mobile Number"
           type="tel"
           clearInput
-          minlength="10"
-          maxlength="10"
+          [attr.maxlength]="maxPhoneLength"
           (ionFocus)="Show()"
-          (ionBlur)="Hide()">
+          (ionBlur)="Hide()"
+          class="phone-input">
         </ion-input>
       </ion-item>
       <ion-text class="error" *ngIf="!form.get('phone').valid && form.get('phone').touched">
@@ -42,8 +42,14 @@
           Please enter a valid Mobile Number
         </p>
       </ion-text>
-      <ion-button expand="block" type="submit" [disabled]="!form.get('phone').valid" (click)="signIn()">
-        <span *ngIf="!approve2">Continue</span>
+      <ion-button expand="block" type="submit" 
+        [disabled]="!form.valid || !CountryCode" 
+        (click)="signIn()"
+        class="submit-button">
+        <span *ngIf="!approve2">
+          <ion-icon name="log-in-outline"></ion-icon>
+          Continue
+        </span>
         <ion-spinner *ngIf="approve2" name="crescent"></ion-spinner>
       </ion-button>
     </form>

@@ -1,5 +1,5 @@
-import { Component, ElementRef, OnInit, ViewChild, AfterViewInit } from '@angular/core';
-import { NavController, MenuController } from '@ionic/angular';
+import { Component, ElementRef, OnInit, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { NavController, MenuController, Platform } from '@ionic/angular';
 import { MapService } from '../services/map.service';
 import { AvatarService } from '../services/avatar.service';
 import { Auth } from '@angular/fire/auth';
@@ -13,7 +13,7 @@ Chart.register(...registerables);
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
 })
-export class HomePage implements OnInit, AfterViewInit {
+export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('map') mapRef: ElementRef<HTMLElement>;
   @ViewChild('earningsChart') earningsChartRef: ElementRef;
   @ViewChild('driversChart') driversChartRef: ElementRef;
@@ -27,22 +27,68 @@ export class HomePage implements OnInit, AfterViewInit {
   coordinates: Position;
   LatLng: { lat: number; lng: number };
 
+  showMap: boolean = true;
+  isMobile: boolean = false;
+
+  private resizeObserver: ResizeObserver;
+  private isDragging = false;
+  private startX: number;
+  private startWidth: number;
+
+  private platformSubscription: any;
+
   constructor(
     private auth: Auth,
     private menuCtrl: MenuController,
     public map: MapService,
     private database: AvatarService,
-    public nav: NavController
-  ) {}
+    public nav: NavController,
+    private platform: Platform
+  ) {
+    this.checkPlatformSize();
+  }
 
   async ngOnInit() {
+    this.platformSubscription = this.platform.resize.subscribe(() => {
+      this.checkPlatformSize();
+    });
+
     try {
-      await Geolocation.checkPermissions();
-      this.coordinates = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
-      
+      // Check if running on mobile
+      if (this.platform.is('capacitor')) {
+        // Request permissions explicitly for mobile
+        const permResult = await Geolocation.requestPermissions();
+        if (permResult.location !== 'granted') {
+          console.error('Location permission not granted');
+          // Set default coordinates if permission denied
+          this.coordinates = {
+            coords: {
+              latitude: 0,
+              longitude: 0,
+              accuracy: 0,
+              altitude: null,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null
+            },
+            timestamp: 0
+          };
+        } else {
+          this.coordinates = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000 // 10 second timeout
+          });
+        }
+      } else {
+        // Web browser handling
+        this.coordinates = await Geolocation.getCurrentPosition({ 
+          enableHighAccuracy: true 
+        });
+      }
+
       this.LatLng = {
-        lat: this.coordinates.coords.latitude,
-        lng: this.coordinates.coords.longitude
+        lat: this.coordinates.coords.latitude || 0,
+        lng: this.coordinates.coords.longitude || 0
       };
 
       this.menuCtrl.enable(true);
@@ -71,11 +117,34 @@ export class HomePage implements OnInit, AfterViewInit {
 
     } catch (e) {
       console.error('Error in ngOnInit:', e);
+      // Set default coordinates if there's an error
+      this.coordinates = {
+        coords: {
+          latitude: 0,
+          longitude: 0,
+          accuracy: 0,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null
+        },
+        timestamp: 0
+      };
+      this.LatLng = { lat: 0, lng: 0 };
     }
   }
 
   async ngAfterViewInit() {
-    await this.map.createMap(this.mapRef.nativeElement, this.coordinates);
+    try {
+      if (this.mapRef && this.mapRef.nativeElement) {
+        await this.map.createMap(this.mapRef.nativeElement, this.coordinates);
+        this.setupMapResize();
+      } else {
+        console.error('Map reference not found');
+      }
+    } catch (e) {
+      console.error('Error creating map:', e);
+    }
   }
 
   updateChart(chartRef: ElementRef, data: number[], label: string) {
@@ -114,5 +183,54 @@ export class HomePage implements OnInit, AfterViewInit {
 
   gotoProfile() {
     this.nav.navigateForward('profile');
+  }
+
+  toggleMap() {
+    this.showMap = !this.showMap;
+  }
+
+  private checkPlatformSize() {
+    this.isMobile = this.platform.width() < 768;
+    this.showMap = !this.isMobile;
+  }
+
+  private setupMapResize() {
+    const mapElement = this.mapRef?.nativeElement;
+    if (!mapElement) return;
+
+    const resizeHandle = mapElement.querySelector('.dashboard-map::after');
+    if (!resizeHandle) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      this.isDragging = true;
+      this.startX = e.clientX;
+      this.startWidth = mapElement.offsetWidth;
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!this.isDragging) return;
+      const delta = e.clientX - this.startX;
+      const newWidth = Math.max(200, Math.min(600, this.startWidth + delta));
+      mapElement.style.width = `${newWidth}px`;
+    };
+
+    const handleMouseUp = () => {
+      this.isDragging = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    resizeHandle.addEventListener('mousedown', handleMouseDown);
+  }
+
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    if (this.platformSubscription) {
+      this.platformSubscription.unsubscribe();
+    }
   }
 }

@@ -25,7 +25,7 @@
     </ion-item>
 
     <div class="profile-image-container">
-      <ion-avatar (click)="changeImage()">
+      <ion-avatar (click)="presentImageSourceChoice()">
         <img *ngIf="profileImage; else placeholder_avatar;" [src]="profileImage" alt="Profile Picture" />
         <ng-template #placeholder_avatar>
           <div class="fallback">

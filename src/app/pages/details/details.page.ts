@@ -7,6 +7,7 @@ import { AvatarService } from 'src/app/services/avatar.service';
 import { OverlayService } from 'src/app/services/overlay.service';
 import { Geolocation } from '@capacitor/geolocation';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { AlertController } from '@ionic/angular';
 
 export interface RoleType {
   id?: string;
@@ -32,7 +33,7 @@ export class DetailsPage implements OnInit {
   licenseImage: any;
   profileImage: any;
   constructor(
-    private overlay: OverlayService, private authy: Auth, private auth: AuthService, private avatar: AvatarService, private router: Router
+    private overlay: OverlayService, private authy: Auth, private auth: AuthService, private avatar: AvatarService, private router: Router, private alertController: AlertController
   ) { }
 
   ngOnInit() {
@@ -72,20 +73,92 @@ export class DetailsPage implements OnInit {
     this.currentRole = event.detail.value.name;
   }
 
-  async changeImage() {
-    try{
-    const image = await Camera.getPhoto({
-      quality: 20,
-      allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Camera, // Camera, Photos or Prompt!
+  async presentImageSourceChoice() {
+    const alert = await this.alertController.create({
+      header: 'Select Image Source',
+      buttons: [
+        {
+          text: 'Camera',
+          handler: () => {
+            this.getImage(CameraSource.Camera);
+          }
+        },
+        {
+          text: 'Photo Library',
+          handler: () => {
+            this.getImage(CameraSource.Photos);
+          }
+        },
+        {
+          text: 'URL',
+          handler: () => {
+            this.promptForImageURL();
+          }
+        },
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        }
+      ]
     });
-    this.imageURl = image.dataUrl
-    this.profileImage = image.dataUrl
-
-  }catch(e){
-    this.overlay.showAlert('Error', e)
+    await alert.present();
   }
+
+  async promptForImageURL() {
+    const alert = await this.alertController.create({
+      header: 'Enter Image URL',
+      inputs: [
+        {
+          name: 'imageUrl',
+          type: 'url',
+          placeholder: 'https://example.com/image.jpg'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel'
+        },
+        {
+          text: 'OK',
+          handler: (data) => {
+            if (data.imageUrl) {
+              this.loadImageFromURL(data.imageUrl);
+            }
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async getImage(source: CameraSource) {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 70,
+        allowEditing: true,
+        resultType: CameraResultType.Base64,
+        source: source,
+        width: 400 // Limit width to reduce size
+      });
+
+      if (image.base64String) {
+        this.profileImage = `data:image/${image.format};base64,${image.base64String}`;
+        // Handle the image upload to your service here
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+    }
+  }
+
+  async loadImageFromURL(url: string) {
+    try {
+      // You might want to add validation for the URL here
+      this.profileImage = url;
+      // Handle the image upload to your service here
+    } catch (error) {
+      console.error('Error loading image from URL:', error);
+    }
   }
 
   async changeLicense() {
@@ -108,23 +181,48 @@ export class DetailsPage implements OnInit {
 
   async signIn() {
     try {
-        this.overlay.showAlert('Success', 'Location captured successfully!');
-        this.approve2 = true;
-        if (this.profileImage && this.currentRole && this.form.value.fullname && this.form.value.lastname && this.form.value.email && this.imageURl) {
+      // First get coordinates
+      const coordinates = await Geolocation.getCurrentPosition();
+      this.coordinates = {
+        lat: coordinates.coords.latitude,
+        lng: coordinates.coords.longitude
+      };
+      
+      this.overlay.showAlert('Success', 'Location captured successfully!');
+      this.approve2 = true;
+
+      // Check form completeness with profileImage instead of imageURl
+      if (this.profileImage && 
+          this.currentRole && 
+          this.form.value.fullname && 
+          this.form.value.lastname && 
+          this.form.value.email) {
+        
         await this.avatar.CreateAdmin(
           this.form.value.fullname + ' ' + this.form.value.lastname,
           this.form.value.email,
           this.authy.currentUser.phoneNumber,
           this.currentRole,
-          this.imageURl,
+          this.profileImage, // Use profileImage instead of imageURl
           true,
           this.coordinates
-        )
+        );
+        
         this.approve2 = false;
         this.router.navigateByUrl('home');
-        }else{
-          this.overlay.showAlert('Incomplete', "Complete the form")
-        }
+      } else {
+        let missingFields = [];
+        if (!this.profileImage) missingFields.push('Profile Image');
+        if (!this.currentRole) missingFields.push('Role');
+        if (!this.form.value.fullname) missingFields.push('First Name');
+        if (!this.form.value.lastname) missingFields.push('Last Name');
+        if (!this.form.value.email) missingFields.push('Email');
+        
+        this.overlay.showAlert(
+          'Incomplete Form', 
+          `Please complete the following fields: ${missingFields.join(', ')}`
+        );
+      }
     } catch(e) {
       console.error('Sign in error:', e);
       if (e.message === 'User denied Geolocation') {

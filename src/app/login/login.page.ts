@@ -19,7 +19,8 @@ import { CountrySearchModalComponent } from '../country-search-modal/country-sea
 })
 export class LoginPage implements OnInit, AfterViewInit {
   form: FormGroup;
-  CountryCode: any;
+  CountryCode: string;
+  defaultCountryCode: string = '+1';
   CountryJson = environment.CountryJson;
   flag: any = "https://cdn.kcak11.com/CountryFlags/countries/ng.svg";
   filteredCountries = [];
@@ -37,6 +38,8 @@ export class LoginPage implements OnInit, AfterViewInit {
   numberT: string;
   backButtonSubscription: any;
 
+  maxPhoneLength: number = 10;
+
   constructor(
     private modalCtrl: ModalController,
     private auth: AuthService,
@@ -48,11 +51,9 @@ export class LoginPage implements OnInit, AfterViewInit {
     private alertController: AlertController,
     private platform: Platform
   ) {
-    this.CountryCode = '+57';
-    this.numberT = '+57';
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.form = new FormGroup({
       phone: new FormControl(null, {
         validators: [Validators.required, Validators.minLength(10), Validators.maxLength(10)]
@@ -60,19 +61,22 @@ export class LoginPage implements OnInit, AfterViewInit {
     });
 
     this.filteredCountries = this.CountryJson;
+    
+    // Detect country code before anything else
+    await this.detectCountry();
 
     // Initialize ReCaptcha verifier
     this.recaptchaVerifier = new RecaptchaVerifier('sign-in-button', {
       'size': 'invisible',
       'callback': (response) => {
-        // reCAPTCHA solved - allow signIn
         this.signIn();
       },
       'expired-callback': () => {
         // Response expired - handle expired reCAPTCHA
       }
     }, this.authY);
-    this.initializeBackButtonCustomHandler(); // Initialize back button handler
+    
+    this.initializeBackButtonCustomHandler();
   }
 
   ngAfterViewInit() {
@@ -243,5 +247,84 @@ export class LoginPage implements OnInit, AfterViewInit {
       ]
     });
     await alert.present();
+  }
+
+  async detectCountry() {
+    try {
+      // First try to get country from device/browser locale
+      const browserLocale = navigator.language;
+      const countryCode = browserLocale.split('-')[1] || browserLocale.split('_')[1];
+      
+      if (countryCode) {
+        // Find matching country in CountryJson
+        const country = this.CountryJson.find(c => c.isoCode === countryCode.toUpperCase());
+        if (country) {
+          this.CountryCode = country.dialCode;
+          this.numberT = country.dialCode;
+          this.maxPhoneLength = this.getPhoneMaxLength(countryCode);
+          return;
+        }
+      }
+
+      // Fallback to IP geolocation if browser locale doesn't work
+      const response = await fetch('https://ipapi.co/json/');
+      const data = await response.json();
+      
+      if (data && data.country_calling_code) {
+        this.CountryCode = data.country_calling_code.startsWith('+') ? 
+          data.country_calling_code : 
+          `+${data.country_calling_code}`;
+        this.numberT = this.CountryCode;
+        this.maxPhoneLength = this.getPhoneMaxLength(data.country_code);
+        
+        // Update form validation based on country
+        this.updatePhoneValidation();
+      } else {
+        throw new Error('Could not detect country from IP');
+      }
+    } catch (error) {
+      console.error('Error detecting country:', error);
+      // Fallback to default country code
+      this.CountryCode = '+1';
+      this.numberT = '+1';
+      this.maxPhoneLength = 10;
+      this.updatePhoneValidation();
+    }
+  }
+
+  private updatePhoneValidation() {
+    this.form.get('phone').setValidators([
+      Validators.required,
+      Validators.minLength(this.maxPhoneLength),
+      Validators.maxLength(this.maxPhoneLength)
+    ]);
+    this.form.get('phone').updateValueAndValidity();
+  }
+
+  private getPhoneMaxLength(countryCode: string): number {
+    const phoneLengths = {
+      'US': 10, // United States
+      'GB': 10, // United Kingdom
+      'IN': 10, // India
+      'CA': 10, // Canada
+      'AU': 9,  // Australia
+      'DE': 11, // Germany
+      'FR': 9,  // France
+      'IT': 10, // Italy
+      'ES': 9,  // Spain
+      'BR': 11, // Brazil
+      'MX': 10, // Mexico
+      'JP': 10, // Japan
+      'KR': 11, // South Korea
+      'CN': 11, // China
+      'RU': 10, // Russia
+      'ZA': 9,  // South Africa
+      'NG': 10, // Nigeria
+      'EG': 10, // Egypt
+      'SA': 9,  // Saudi Arabia
+      'AE': 9,  // UAE
+      'default': 10
+    };
+    return phoneLengths[countryCode] || phoneLengths.default;
   }
 }

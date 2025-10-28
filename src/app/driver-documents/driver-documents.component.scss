@@ -1,0 +1,72 @@
+ion-header {
+  ion-toolbar {
+    --background: transparent;
+  }
+}
+
+ion-content {
+  --background: var(--ion-color-light-shade);
+}
+
+.document-list {
+  display: grid;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.document-item {
+  background: var(--ion-color-light);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .document-date {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+}
+
+.document-text {
+  padding: 16px;
+  margin: 0;
+  font-size: 16px;
+  color: var(--ion-color-dark);
+}
+
+.document-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  ion-content {
+    --background: var(--ion-color-dark);
+  }
+
+  .document-item {
+    background: var(--ion-color-dark-shade);
+  }
+
+  .document-text {
+    color: var(--ion-color-light);
+  }
+}

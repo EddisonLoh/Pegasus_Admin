@@ -1,0 +1,23 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="closeModal()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Driver Documents</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="document-list">
+    <div class="document-item" *ngFor="let document of records">
+      <div class="document-header">
+        <h2>{{ document.name }}</h2>
+        <span class="document-date">{{ document.date | date:'mediumDate' }}</span>
+      </div>
+      <p class="document-text">{{ document.text.value }}</p>
+      <img *ngIf="document.image" [src]="document.image" alt="Document Image" class="document-image">
+    </div>
+  </div>
+</ion-content>
