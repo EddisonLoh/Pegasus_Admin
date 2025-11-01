@@ -1,6 +1,7 @@
 import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { StatusBar } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 import { IonContent, ModalController } from '@ionic/angular';
 import { Observable } from 'rxjs';
 import { AvatarService } from '../services/avatar.service';
@@ -44,8 +45,9 @@ export class SupportComponent implements OnInit {
   }
 
   async Show(){
-    await StatusBar.setOverlaysWebView({ overlay: false });
-  
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: false });
+    }
   }
 
   closeModal(){
@@ -54,8 +56,9 @@ export class SupportComponent implements OnInit {
 
 
   async Hide(){
-    await StatusBar.setOverlaysWebView({ overlay: true });
-  
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: true });
+    }
   }
 
   ngOnInit(){}

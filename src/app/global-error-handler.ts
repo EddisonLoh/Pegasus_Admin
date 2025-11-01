@@ -1,8 +1,17 @@
 import { ErrorHandler, Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: any): void {
+    const errorMsg = error.message || JSON.stringify(error);
+    
+    // Filter out Capacitor web platform errors
+    if (this.isCapacitorWebError(errorMsg)) {
+      console.warn('Capacitor web platform error (suppressed):', errorMsg);
+      return;
+    }
+    
     // Force console log even if something is suppressing logs
     window['forceLog'] = function(msg) {
       var div = document.createElement('div');
@@ -17,7 +26,6 @@ export class GlobalErrorHandler implements ErrorHandler {
       document.body.appendChild(div);
     };
     
-    const errorMsg = error.message || JSON.stringify(error);
     console.error('Global error handler caught error:', error);
     window['forceLog']('ERROR: ' + errorMsg);
     
@@ -35,5 +43,20 @@ export class GlobalErrorHandler implements ErrorHandler {
     } catch (e) {
       console.error('Failed to add error to DOM', e);
     }
+  }
+
+  private isCapacitorWebError(errorMsg: string): boolean {
+    const capacitorWebErrors = [
+      'plugin is not implemented on web',
+      'StatusBar" plugin is not implemented on web',
+      'SplashScreen" plugin is not implemented on web',
+      'Camera" plugin is not implemented on web',
+      'Geolocation" plugin is not implemented on web',
+      'Network" plugin is not implemented on web'
+    ];
+    
+    return capacitorWebErrors.some(error => 
+      errorMsg.toLowerCase().includes(error.toLowerCase())
+    );
   }
 } 

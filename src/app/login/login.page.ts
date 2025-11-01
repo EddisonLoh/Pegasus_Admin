@@ -7,9 +7,8 @@ import { AuthService } from '../services/auth.service';
 import { environment } from '../../environments/environment';
 import { OverlayService } from '../services/overlay.service';
 import { Auth, RecaptchaVerifier } from '@angular/fire/auth';
-import { StatusBar } from '@capacitor/status-bar';
 import { AvatarService } from '../services/avatar.service';
-import { SplashScreen } from '@capacitor/splash-screen';
+import { PlatformService } from '../services/platform.service';
 import { CountrySearchModalComponent } from '../country-search-modal/country-search-modal.component';
 
 @Component({
@@ -49,7 +48,8 @@ export class LoginPage implements OnInit, AfterViewInit {
     private avatar: AvatarService,
     private overlay: OverlayService,
     private alertController: AlertController,
-    private platform: Platform
+    private platform: Platform,
+    private platformService: PlatformService
   ) {
   }
 
@@ -61,7 +61,7 @@ export class LoginPage implements OnInit, AfterViewInit {
     });
 
     this.filteredCountries = this.CountryJson;
-    
+
     // Detect country code before anything else
     await this.detectCountry();
 
@@ -75,7 +75,7 @@ export class LoginPage implements OnInit, AfterViewInit {
         // Response expired - handle expired reCAPTCHA
       }
     }, this.authY);
-    
+
     this.initializeBackButtonCustomHandler();
   }
 
@@ -100,7 +100,7 @@ export class LoginPage implements OnInit, AfterViewInit {
   }
 
   async HideSplash() {
-    await SplashScreen.hide();
+    await this.platformService.hideSplashScreen();
   }
 
   async openCountrySearchModal() {
@@ -131,88 +131,104 @@ export class LoginPage implements OnInit, AfterViewInit {
   }
 
   async Show() {
-    await StatusBar.setOverlaysWebView({ overlay: false });
+    await this.platformService.setStatusBarOverlay(false);
   }
 
   async Hide() {
-    await StatusBar.setOverlaysWebView({ overlay: true });
+    await this.platformService.setStatusBarOverlay(true);
   }
 
   async signIn() {
-      try {
-        if (!this.form.valid) {
-          this.form.markAllAsTouched();
-          return;
-        }
-        console.log('Form Value:', this.form.value);
-        this.overlay.showLoader('');
-  
-        const fullPhoneNumber = this.numberT + this.form.value.phone;
-        console.log('Attempting to sign in with phone number:', fullPhoneNumber);
-  
-        // Use AuthService to handle sign-in with phone number
-        const confirmationResult = await this.auth.signInWithPhoneNumber(fullPhoneNumber);
-  
-        console.log('Confirmation Result:', confirmationResult);
-        
-        let storedOTP = localStorage.getItem('defaultOTP');
-        if (!storedOTP){
-          storedOTP = '';
-        }
+    try {
+      if (!this.form.valid) {
+        this.form.markAllAsTouched();
+        return;
+      }
+      console.log('Form Value:', this.form.value);
+      this.overlay.showLoader('');
 
+      const fullPhoneNumber = this.numberT + this.form.value.phone;
+      console.log('Attempting to sign in with phone number:', fullPhoneNumber);
+
+      // Use AuthService to handle sign-in with phone number
+      const confirmationResult = await this.auth.signInWithPhoneNumber(fullPhoneNumber);
+
+      console.log('Confirmation Result:', confirmationResult);
+
+      let storedOTP = localStorage.getItem('defaultOTP');
+      if (!storedOTP) {
+        storedOTP = '';
+      }
+
+      this.overlay.hideLoader();
+
+      const options: ModalOptions = {
+        component: OtpComponent,
+        componentProps: {
+          defaultOtp: storedOTP,
+          phone: this.form.value.phone,
+          countryCode: this.numberT,
+          confirmationResult: confirmationResult
+        },
+        swipeToClose: true
+      };
+
+      const modal = await this.modalCtrl.create(options);
+      await modal.present();
+      const data: any = await modal.onWillDismiss();
+      console.log('OTP Modal Dismissed:', data);
+
+      // Check if user is already authenticated after OTP verification
+      const currentUser = this.authY.currentUser;
+      if (currentUser) {
+        console.log('User already authenticated:', currentUser);
+        if (!currentUser.email) {
+          console.log('Navigating to details page');
+          this.router.navigateByUrl('/details');
+        } else {
+          console.log('Navigating to home page');
+          this.router.navigateByUrl('/home');
+        }
+        this.approve2 = false;
         this.overlay.hideLoader();
-  
-        const options: ModalOptions = {
-          component: OtpComponent,
-          componentProps: {
-            defaultOtp: storedOTP,
-            phone: this.form.value.phone,
-            countryCode: this.numberT,
-            confirmationResult: confirmationResult
-          },
-          swipeToClose: true
-        };
-  
-        const modal = await this.modalCtrl.create(options);
-        await modal.present();
-        const data: any = await modal.onWillDismiss();
-        console.log('OTP Modal Dismissed:', data);
-  
+      } else {
+        // Set up auth state listener if user is not immediately available
         this.authY.onAuthStateChanged(async (user) => {
           if (user) {
-              console.log('User Profile Data:', data);
-              if (!user.email) {
-                console.log('Navigating to details page');
-                this.router.navigateByUrl('details');
-              } else {
-                console.log('Navigating to home page');
-                this.router.navigateByUrl('home');
-              }
-              this.approve2 = false;
-              this.overlay.hideLoader();
+            console.log('User Profile Data:', data);
+            if (!user.email) {
+              console.log('Navigating to details page');
+              this.router.navigateByUrl('/details');
+            } else {
+              console.log('Navigating to home page');
+              this.router.navigateByUrl('/home');
+            }
+            this.approve2 = false;
+            this.overlay.hideLoader();
           }
         });
-      } catch (e) {
-        console.error('Error during signIn:', e);
-        this.approve2 = false;
-        
-        // Handle specific error cases
-        if (e.code === 'auth/invalid-app-credential' || e.code === 'auth/too-many-requests') {
-          this.CountryCode = '+57';
-          this.numberT = '+57';
-          const defaultNumbers = ['5006001000', '5006001000'];
-          const randomDefaultNumber = defaultNumbers[Math.floor(Math.random() * defaultNumbers.length)];
-          this.form.controls['phone'].setValue(randomDefaultNumber);
-          localStorage.setItem('defaultOTP', '123456');
-          this.overlay.showAlert('Daily SMS Limit Reached', `The daily SMS limit has been reached. Please use the default number +57:${randomDefaultNumber}`);
-        } else if (e.code === 'auth/invalid-phone-number') {
-          this.overlay.showAlert('Invalid Phone Number', 'Please enter a valid phone number.');
-        } else {
-          this.overlay.showAlert('Error', `Error during sign-in: ${e.message || JSON.stringify(e)}`);
-        }
-        
-        this.overlay.hideLoader();
       }
+    } catch (e) {
+      console.error('Error during signIn:', e);
+      this.approve2 = false;
+
+      // Handle specific error cases
+      if (e.code === 'auth/invalid-app-credential' || e.code === 'auth/too-many-requests') {
+        this.CountryCode = '+57';
+        this.numberT = '+57';
+        const defaultNumbers = ['5006001000', '5006001000'];
+        const randomDefaultNumber = defaultNumbers[Math.floor(Math.random() * defaultNumbers.length)];
+        this.form.controls['phone'].setValue(randomDefaultNumber);
+        localStorage.setItem('defaultOTP', '123456');
+        this.overlay.showAlert('Daily SMS Limit Reached', `The daily SMS limit has been reached. Please use the default number +57:${randomDefaultNumber}`);
+      } else if (e.code === 'auth/invalid-phone-number') {
+        this.overlay.showAlert('Invalid Phone Number', 'Please enter a valid phone number.');
+      } else {
+        this.overlay.showAlert('Error', `Error during sign-in: ${e.message || JSON.stringify(e)}`);
+      }
+
+      this.overlay.hideLoader();
+    }
   }
 
   initializeBackButtonCustomHandler() {
@@ -223,7 +239,7 @@ export class LoginPage implements OnInit, AfterViewInit {
 
   async handleBackButton() {
     try {
-        await this.showExitConfirmation();
+      await this.showExitConfirmation();
     } catch (error) {
       console.error('Error handling back button:', error);
     }
@@ -254,7 +270,7 @@ export class LoginPage implements OnInit, AfterViewInit {
       // First try to get country from device/browser locale
       const browserLocale = navigator.language;
       const countryCode = browserLocale.split('-')[1] || browserLocale.split('_')[1];
-      
+
       if (countryCode) {
         // Find matching country in CountryJson
         const country = this.CountryJson.find(c => c.isoCode === countryCode.toUpperCase());
@@ -269,14 +285,14 @@ export class LoginPage implements OnInit, AfterViewInit {
       // Fallback to IP geolocation if browser locale doesn't work
       const response = await fetch('https://ipapi.co/json/');
       const data = await response.json();
-      
+
       if (data && data.country_calling_code) {
-        this.CountryCode = data.country_calling_code.startsWith('+') ? 
-          data.country_calling_code : 
+        this.CountryCode = data.country_calling_code.startsWith('+') ?
+          data.country_calling_code :
           `+${data.country_calling_code}`;
         this.numberT = this.CountryCode;
         this.maxPhoneLength = this.getPhoneMaxLength(data.country_code);
-        
+
         // Update form validation based on country
         this.updatePhoneValidation();
       } else {

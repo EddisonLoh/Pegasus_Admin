@@ -3,6 +3,7 @@
 import { Component, OnInit, ViewChild, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { StatusBar } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 import { IonContent } from '@ionic/angular';
 import { Observable } from 'rxjs';
 import { AvatarService } from 'src/app/services/avatar.service';
@@ -43,11 +44,15 @@ export class EnrouteChatComponent implements OnInit {
   }
 
   async Show() {
-    await StatusBar.setOverlaysWebView({ overlay: false });
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: false });
+    }
   }
 
   async Hide() {
-    await StatusBar.setOverlaysWebView({ overlay: true });
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: true });
+    }
   }
 
   ngOnInit() {

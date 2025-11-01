@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { Firestore, onSnapshot, doc, collection } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 import { IonContent, ModalController, ModalOptions, NavController } from '@ionic/angular';
 import { Observable } from 'rxjs';
 import { AvatarService } from 'src/app/services/avatar.service';

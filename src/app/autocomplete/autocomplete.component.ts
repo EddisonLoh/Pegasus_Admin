@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { StatusBar } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 import { Client } from '@googlemaps/google-maps-services-js';
 import { ModalController } from '@ionic/angular';
 import { environment } from 'src/environments/environment';
@@ -65,14 +66,16 @@ export class AutocompleteComponent implements OnInit {
 
 
   async Show(){
-    await StatusBar.setOverlaysWebView({ overlay: false });
- 
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: false });
+    }
     this.hideImage = true;
   }
 
   async Hide(){
-    await StatusBar.setOverlaysWebView({ overlay: true });
-   
+    if (Capacitor.isNativePlatform()) {
+      await StatusBar.setOverlaysWebView({ overlay: true });
+    }
     this.hideImage = false;
   }
 
