@@ -44,6 +44,9 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Check initial route for menu visibility
+    this.checkMenuVisibility();
+    
     // Handle initial navigation based on auth state
     this.auth.onAuthStateChanged((user) => {
       if (!user) {
@@ -59,9 +62,17 @@ export class AppComponent implements OnInit {
     // Handle menu visibility based on route data
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
-    ).subscribe(() => {
-      const currentRoute = this.router.routerState.snapshot.root;
-      this.menuEnabled = currentRoute.firstChild?.data?.['menuEnabled'] ?? false;
+    ).subscribe((event: NavigationEnd) => {
+      // Get the activated route
+      let route = this.router.routerState.root;
+      while (route.firstChild) {
+        route = route.firstChild;
+      }
+      
+      // Check if menu should be enabled for this route
+      this.menuEnabled = route.snapshot.data?.['menuEnabled'] ?? false;
+      
+      console.log('Route changed:', event.url, 'Menu enabled:', this.menuEnabled);
       
       // If we're at the root route, redirect to login
       if (this.router.url === '/') {
@@ -109,5 +120,17 @@ export class AppComponent implements OnInit {
       console.error('Logout failed:', error);
       // Handle logout error (e.g., show an error message to the user)
     }
+  }
+
+  private checkMenuVisibility() {
+    // Get the activated route
+    let route = this.router.routerState.root;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+    
+    // Check if menu should be enabled for this route
+    this.menuEnabled = route.snapshot.data?.['menuEnabled'] ?? false;
+    console.log('Initial route check:', this.router.url, 'Menu enabled:', this.menuEnabled);
   }
 }
