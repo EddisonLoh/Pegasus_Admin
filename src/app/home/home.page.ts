@@ -169,15 +169,30 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
 
   async updateDriverMarkers(drivers) {
     for (let driver of drivers) {
+      // Validate that lat and lng are valid numbers
+      const lat = parseFloat(driver.Driver_lat);
+      const lng = parseFloat(driver.Driver_lng);
+      
+      // Skip this driver if coordinates are invalid
+      if (isNaN(lat) || isNaN(lng) || lat === 0 && lng === 0) {
+        console.warn('Invalid coordinates for driver:', driver.Driver_name, 'lat:', driver.Driver_lat, 'lng:', driver.Driver_lng);
+        continue;
+      }
+
       const markerLatLng = {
-        lat: driver.Driver_lat,
-        lng: driver.Driver_lng
+        lat: lat,
+        lng: lng
       };
-      await this.map.newMap.addMarker({
-        coordinate: markerLatLng,
-        iconUrl: 'https://i.ibb.co/KDy365b/hatchback.png',
-        title: driver.Driver_name || 'Driver',
-      });
+      
+      try {
+        await this.map.newMap.addMarker({
+          coordinate: markerLatLng,
+          iconUrl: 'https://i.ibb.co/KDy365b/hatchback.png',
+          title: driver.Driver_name || 'Driver',
+        });
+      } catch (error) {
+        console.error('Error adding marker for driver:', driver.Driver_name, error);
+      }
     }
   }
 

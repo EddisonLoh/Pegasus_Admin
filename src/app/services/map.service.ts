@@ -37,22 +37,36 @@ export class MapService {
        },
      });
  
+     // Validate coordinates before using them
+     const lat = parseFloat(coords.coords.latitude) || 0;
+     const lng = parseFloat(coords.coords.longitude) || 0;
+     
      this.LatLng =  {
-       lat: coords.coords.latitude,
-       lng: coords.coords.longitude
+       lat: lat,
+       lng: lng
      }
 
      this.newMap.enableTrafficLayer(true);
      
-     await this.newMap.setCamera({
-       animate: true,
-       animationDuration: 500,
-       zoom: 3,
-       coordinate: this.LatLng
-     })
-        const address = await this.geocode.getAddress(this.LatLng.lat, this.LatLng.lng)
-        this.actualLocation = address.data.results[0].formatted_address;
-        this.locationAddress = address.data.results[1].address_components[0].long_name + ' ' + address.data.results[1].address_components[1].long_name;
+     // Only set camera if we have valid coordinates
+     if (lat !== 0 || lng !== 0) {
+       await this.newMap.setCamera({
+         animate: true,
+         animationDuration: 500,
+         zoom: 3,
+         coordinate: this.LatLng
+       })
+     }
+        // Only get address if we have valid coordinates
+        if (this.LatLng.lat !== 0 && this.LatLng.lng !== 0) {
+          const address = await this.geocode.getAddress(this.LatLng.lat, this.LatLng.lng)
+          if (address && address.data && address.data.results && address.data.results.length > 0) {
+            this.actualLocation = address.data.results[0].formatted_address;
+            if (address.data.results.length > 1 && address.data.results[1].address_components) {
+              this.locationAddress = address.data.results[1].address_components[0].long_name + ' ' + address.data.results[1].address_components[1].long_name;
+            }
+          }
+        }
         this.newMap.enableCurrentLocation(true);
    }catch(e){
       this.overlay.showAlert('Error', e)
