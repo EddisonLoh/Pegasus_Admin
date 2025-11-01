@@ -53,85 +53,118 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
       this.checkPlatformSize();
     });
 
+    // Initialize with default coordinates first
+    this.setDefaultCoordinates();
+
+    // Try to get user location with fallback strategy
+    await this.getCurrentLocation();
+
+    this.menuCtrl.enable(true);
+
+    // Initialize data subscriptions
+    this.initializeDataSubscriptions();
+  }
+
+  private setDefaultCoordinates() {
+    // Set default coordinates (Nigeria - Lagos area as fallback)
+    this.coordinates = {
+      coords: {
+        latitude: 6.5244,
+        longitude: 3.3792,
+        accuracy: 0,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null
+      },
+      timestamp: Date.now()
+    };
+    
+    this.LatLng = {
+      lat: this.coordinates.coords.latitude,
+      lng: this.coordinates.coords.longitude
+    };
+  }
+
+  private async getCurrentLocation() {
     try {
       // Check if running on mobile
       if (this.platform.is('capacitor')) {
         // Request permissions explicitly for mobile
         const permResult = await Geolocation.requestPermissions();
         if (permResult.location !== 'granted') {
-          console.error('Location permission not granted');
-          // Set default coordinates if permission denied
-          this.coordinates = {
-            coords: {
-              latitude: 0,
-              longitude: 0,
-              accuracy: 0,
-              altitude: null,
-              altitudeAccuracy: null,
-              heading: null,
-              speed: null
-            },
-            timestamp: 0
-          };
-        } else {
-          this.coordinates = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 10000 // 10 second timeout
-          });
+          console.warn('Location permission not granted, using default coordinates');
+          return;
         }
-      } else {
-        // Web browser handling
-        this.coordinates = await Geolocation.getCurrentPosition({ 
-          enableHighAccuracy: true 
-        });
       }
 
-      this.LatLng = {
-        lat: this.coordinates.coords.latitude || 0,
-        lng: this.coordinates.coords.longitude || 0
-      };
-
-      this.menuCtrl.enable(true);
-
-      this.database.getEarnings().subscribe((d) => {
-        this.earnings = d.Earnings;
-        this.updateChart(this.earningsChartRef, [this.earnings], 'Earnings');
-      });
-
-      this.database.getDrivers().subscribe((d) => {
-        this.numDrivers = d.length;
-        this.updateChart(this.driversChartRef, [this.numDrivers], 'Drivers');
-        this.updateDriverMarkers(d);
-      });
-
-      this.database.getRiders().subscribe((d) => {
-        this.numRiders = d.length;
-        this.updateChart(this.ridersChartRef, [this.numRiders], 'Riders');
-      });
-
-      // Assuming you have a method to get trips data
-      this.database.getTrips().subscribe((d) => {
-        this.numTrips = d.length;
-        this.updateChart(this.tripsChartRef, [this.numTrips], 'Trips');
-      });
-
+      // Try high accuracy first with shorter timeout
+      try {
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 60000 // Accept cached position up to 1 minute old
+        });
+        
+        this.coordinates = position;
+        this.LatLng = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        console.log('Got high accuracy location:', this.LatLng);
+        
+      } catch (highAccuracyError) {
+        console.warn('High accuracy location failed, trying low accuracy:', highAccuracyError);
+        
+        // Fallback to low accuracy with longer timeout
+        try {
+          const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 300000 // Accept cached position up to 5 minutes old
+          });
+          
+          this.coordinates = position;
+          this.LatLng = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          console.log('Got low accuracy location:', this.LatLng);
+          
+        } catch (lowAccuracyError) {
+          console.warn('All geolocation attempts failed, using default coordinates:', lowAccuracyError);
+          // Keep default coordinates set in setDefaultCoordinates()
+        }
+      }
+      
     } catch (e) {
-      console.error('Error in ngOnInit:', e);
-      // Set default coordinates if there's an error
-      this.coordinates = {
-        coords: {
-          latitude: 0,
-          longitude: 0,
-          accuracy: 0,
-          altitude: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null
-        },
-        timestamp: 0
-      };
-      this.LatLng = { lat: 0, lng: 0 };
+      console.error('Error getting location:', e);
+      // Keep default coordinates
     }
+  }
+
+  private initializeDataSubscriptions() {
+    this.database.getEarnings().subscribe((d) => {
+      this.earnings = d.Earnings;
+      this.updateChart(this.earningsChartRef, [this.earnings], 'Earnings');
+    });
+
+    this.database.getDrivers().subscribe((d) => {
+      this.numDrivers = d.length;
+      this.updateChart(this.driversChartRef, [this.numDrivers], 'Drivers');
+      this.updateDriverMarkers(d);
+    });
+
+    this.database.getRiders().subscribe((d) => {
+      this.numRiders = d.length;
+      this.updateChart(this.ridersChartRef, [this.numRiders], 'Riders');
+    });
+
+    // Assuming you have a method to get trips data
+    this.database.getTrips().subscribe((d) => {
+      this.numTrips = d.length;
+      this.updateChart(this.tripsChartRef, [this.numTrips], 'Trips');
+    });
   }
 
   async ngAfterViewInit() {
@@ -168,13 +201,19 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async updateDriverMarkers(drivers) {
+    // Check if map is initialized
+    if (!this.map.newMap) {
+      console.warn('Map not initialized yet, skipping driver markers');
+      return;
+    }
+
     for (let driver of drivers) {
       // Validate that lat and lng are valid numbers
       const lat = parseFloat(driver.Driver_lat);
       const lng = parseFloat(driver.Driver_lng);
       
       // Skip this driver if coordinates are invalid
-      if (isNaN(lat) || isNaN(lng) || lat === 0 && lng === 0) {
+      if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
         console.warn('Invalid coordinates for driver:', driver.Driver_name, 'lat:', driver.Driver_lat, 'lng:', driver.Driver_lng);
         continue;
       }
