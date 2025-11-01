@@ -27,7 +27,7 @@ export class MapService {
      this.newMap = await GoogleMap.create({
        id: 'my-cool-map',
        element: ref,
-       apiKey: environment.apiKey,
+       apiKey: environment.mapApiKey,
        config: {
          center: {
            lat: 5.5122138,

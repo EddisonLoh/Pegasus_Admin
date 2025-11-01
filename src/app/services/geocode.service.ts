@@ -20,7 +20,7 @@ export class GeocodeService {
      .reverseGeocode({
      params: {
        latlng: { lat: lat, lng: lng },
-       key: environment.apiKey,
+       key: environment.mapApiKey,
      },
      timeout: 5000, // milliseconds
    })
@@ -37,7 +37,7 @@ export class GeocodeService {
    const latlng = await this.client.geocode({
      params: {
        address: addressi,
-       key: environment.apiKey,
+       key: environment.mapApiKey,
      },
      timeout: 5000, // milliseconds
    })
