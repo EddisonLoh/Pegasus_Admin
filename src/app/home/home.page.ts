@@ -36,6 +36,9 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   private startWidth: number;
 
   private platformSubscription: any;
+  
+  // Store chart instances to prevent memory leaks
+  private charts: Map<string, Chart> = new Map();
 
   constructor(
     private auth: Auth,
@@ -66,7 +69,6 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private setDefaultCoordinates() {
-    // Set default coordinates (Nigeria - Lagos area as fallback)
     this.coordinates = {
       coords: {
         latitude: 6.5244,
@@ -144,9 +146,16 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private initializeDataSubscriptions() {
-    this.database.getEarnings().subscribe((d) => {
-      this.earnings = d.Earnings;
-      this.updateChart(this.earningsChartRef, [this.earnings], 'Earnings');
+    this.database.getTotalEarnings().subscribe({
+      next: (d) => {
+        console.log('Earnings data received:', d);
+        this.earnings = d.Earnings || 0;
+        this.updateChart(this.earningsChartRef, [this.earnings], 'Earnings');
+      },
+      error: (err) => {
+        console.error('Error getting earnings:', err);
+        this.earnings = 0;
+      }
     });
 
     this.database.getDrivers().subscribe((d) => {
@@ -181,52 +190,146 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   updateChart(chartRef: ElementRef, data: number[], label: string) {
+    if (!chartRef || !chartRef.nativeElement) {
+      console.warn(`Chart reference for ${label} not available yet`);
+      return;
+    }
+
+    const chartId = label.toLowerCase();
+    
+    // Destroy existing chart if it exists
+    if (this.charts.has(chartId)) {
+      this.charts.get(chartId)?.destroy();
+    }
+
     const ctx = chartRef.nativeElement.getContext('2d');
-    new Chart(ctx, {
+    
+    // Define color schemes for different chart types
+    const colorSchemes = {
+      'earnings': {
+        borderColor: 'rgb(52, 211, 153)',
+        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+        pointBackgroundColor: 'rgb(52, 211, 153)',
+        pointBorderColor: '#fff'
+      },
+      'drivers': {
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        pointBackgroundColor: 'rgb(59, 130, 246)',
+        pointBorderColor: '#fff'
+      },
+      'riders': {
+        borderColor: 'rgb(168, 85, 247)',
+        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+        pointBackgroundColor: 'rgb(168, 85, 247)',
+        pointBorderColor: '#fff'
+      },
+      'trips': {
+        borderColor: 'rgb(251, 146, 60)',
+        backgroundColor: 'rgba(251, 146, 60, 0.1)',
+        pointBackgroundColor: 'rgb(251, 146, 60)',
+        pointBorderColor: '#fff'
+      }
+    };
+
+    const colors = colorSchemes[chartId] || {
+      borderColor: 'rgb(75, 192, 192)',
+      backgroundColor: 'rgba(75, 192, 192, 0.1)',
+      pointBackgroundColor: 'rgb(75, 192, 192)',
+      pointBorderColor: '#fff'
+    };
+
+    const chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: ['Current'],
         datasets: [{
           label: label,
           data: data,
-          borderColor: 'rgb(75, 192, 192)',
-          tension: 0.1
+          borderColor: colors.borderColor,
+          backgroundColor: colors.backgroundColor,
+          pointBackgroundColor: colors.pointBackgroundColor,
+          pointBorderColor: colors.pointBorderColor,
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: true,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: {
+              size: 14
+            },
+            bodyFont: {
+              size: 13
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              font: {
+                size: 11
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 11
+              }
+            }
+          }
+        }
       }
     });
+
+    // Store the chart instance
+    this.charts.set(chartId, chart);
   }
 
   async updateDriverMarkers(drivers) {
-    // Check if map is initialized
     if (!this.map.newMap) {
       console.warn('Map not initialized yet, skipping driver markers');
       return;
     }
 
-    for (let driver of drivers) {
-      // Validate that lat and lng are valid numbers
+    for (const driver of drivers) {
       const lat = parseFloat(driver.Driver_lat);
       const lng = parseFloat(driver.Driver_lng);
-      
-      // Skip this driver if coordinates are invalid
+
       if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
         console.warn('Invalid coordinates for driver:', driver.Driver_name, 'lat:', driver.Driver_lat, 'lng:', driver.Driver_lng);
         continue;
       }
 
-      const markerLatLng = {
-        lat: lat,
-        lng: lng
-      };
-      
+      const markerLatLng = { lat, lng };
+
       try {
         await this.map.newMap.addMarker({
           coordinate: markerLatLng,
           iconUrl: 'https://i.ibb.co/KDy365b/hatchback.png',
+          iconSize: { width: 36, height: 36 },
+          iconAnchor: { x: 18, y: 18 },
           title: driver.Driver_name || 'Driver',
         });
       } catch (error) {
@@ -280,6 +383,12 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Destroy all chart instances
+    this.charts.forEach((chart) => {
+      chart.destroy();
+    });
+    this.charts.clear();
+
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }

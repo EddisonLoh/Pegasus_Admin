@@ -57,7 +57,7 @@ export class DriversPage implements OnInit {
       this.records2.data = [];
       
       d.forEach(element => {
-        if (element.isApproved) {
+        if (element.isApproved||element.Approved) {
           this.records.data.push(element);
         } else {
           this.records2.data.push(element);
@@ -134,12 +134,22 @@ export class DriversPage implements OnInit {
     const loading = await this.loadingController.create();
     await loading.present();
 
+    const targetIsApproved = !(driver.isApproved || driver.Approved);
+    const action = targetIsApproved ? 'Approved' : 'Disapproved';
+
     try {
-      await this.chatService.UpdateDriverApprove(!driver.isApproved, driver.Driver_id);
-      
+      await this.chatService.UpdateDriverApprove(targetIsApproved, targetIsApproved, driver.Driver_id);
+
+      driver.isApproved = targetIsApproved;
+      driver.Approved = targetIsApproved;
+
+      if (targetIsApproved) {
+        await (this.chatService as any).notifyDriverStatusUpdate?.(driver.Driver_id, 'approved');
+      }
+
       const alert = await this.alertController.create({
-        header: `Driver ${driver.isApproved ? 'Disapproved' : 'Approved'}`,
-        message: `${driver.Driver_name} has been ${driver.isApproved ? 'disapproved' : 'approved'} successfully.`,
+        header: `Driver ${action}`,
+        message: `${driver.Driver_name} has been ${action.toLowerCase()} successfully.`,
         buttons: ['OK'],
       });
       await alert.present();

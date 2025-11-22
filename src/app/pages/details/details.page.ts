@@ -143,6 +143,10 @@ export class DetailsPage implements OnInit {
       });
 
       if (image.base64String) {
+//           const blob = this.base64ToBlob(this.profileImage);
+// await this.avatar.uploadProfileImage(blob);
+
+
         this.profileImage = `data:image/${image.format};base64,${image.base64String}`;
         // Handle the image upload to your service here
       }
@@ -150,6 +154,19 @@ export class DetailsPage implements OnInit {
       console.error('Error capturing image:', error);
     }
   }
+
+
+  private base64ToBlob(dataUrl: string): Blob {
+      const [meta, base64Data] = dataUrl.split(',');
+      const contentType = meta.match(/data:(.*);base64/)?.[1] || 'image/jpeg';
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: contentType });
+    }
 
   async loadImageFromURL(url: string) {
     try {

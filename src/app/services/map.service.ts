@@ -33,7 +33,7 @@ export class MapService {
            lat: 5.5122138,
            lng: 7.4919135
          },
-         zoom: 8,
+          zoom: 8,
        },
      });
  
@@ -53,7 +53,7 @@ export class MapService {
        await this.newMap.setCamera({
          animate: true,
          animationDuration: 500,
-         zoom: 3,
+          zoom: 10,
          coordinate: this.LatLng
        })
      }

@@ -10,7 +10,7 @@ import {
 import { Router } from '@angular/router';
 import { Photo } from '@capacitor/camera';
 import { geohashForLocation} from 'geofire-common';
-import { Observable } from 'rxjs';
+import { combineLatest, Observable, of } from 'rxjs';
 import { Admin } from '../interfaces/admin';
 import { Card } from '../interfaces/card';
 import { docs } from '../interfaces/docs';
@@ -18,6 +18,7 @@ import { Drivers } from '../interfaces/drivers';
 import { DriverUpdate } from '../interfaces/driverUpdate';
 import { Rider } from '../interfaces/rider';
 import { AuthService } from './auth.service';
+import { map, switchMap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -426,6 +427,36 @@ export class AvatarService {
     const userDocRef = doc(this.firestore, `Drivers/${this.auth.currentUser.uid}`);
     return docData(userDocRef);
   }
+  getTotalEarnings(): Observable<{ Earnings: number }> {
+  const driversRef = collection(this.firestore, 'Drivers');
+  return collectionData(driversRef, { idField: 'uid' }).pipe(
+    switchMap((drivers: any[]) => {
+      if (drivers.length === 0) {
+        return of({ Earnings: 0 });
+      }
+
+      // Create an array of observables for each driver's earnings subcollection
+      const earningsObservables = drivers.map(driver => {
+        const earningsRef = collection(this.firestore, `Drivers/${driver.uid}/Earnings`);
+        return collectionData(earningsRef);
+      });
+
+      // Combine all earnings observables
+      return combineLatest(earningsObservables).pipe(
+        map((allEarningsArrays: any[][]) => {
+          // Flatten and sum all earnings
+          let totalEarnings = 0;
+          allEarningsArrays.forEach(earningsArray => {
+            earningsArray.forEach(earning => {
+              totalEarnings += earning.amount || 0;
+            });
+          });
+          return { Earnings: totalEarnings };
+        })
+      );
+    })
+  );
+}
 
   getCartypes() {
     const userDocRef = collection(this.firestore, `Cartypes`);
@@ -606,9 +637,10 @@ async DriverBlock(value, uid) {
   });
 }
 
-async UpdateDriverApprove(value, uid) {
+async UpdateDriverApprove(value,drivercheck, uid) {
   return await updateDoc(doc(this.firestore, `Drivers/${uid}`), {
-     Approved: value,
+     Approved: drivercheck,
+     isApproved: value
   });
 }
 
