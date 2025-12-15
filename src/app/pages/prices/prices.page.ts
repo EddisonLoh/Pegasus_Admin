@@ -3,6 +3,7 @@ import { LoadingController, ModalController, ModalOptions } from '@ionic/angular
 import { CartypeComponent } from 'src/app/cartype/cartype.component';
 import { PricesComponent } from 'src/app/prices/prices.component';
 import { AvatarService } from 'src/app/services/avatar.service';
+import { SettingsService } from 'src/app/services/settings.service';
 
 @Component({
   selector: 'app-prices',
@@ -15,7 +16,14 @@ export class PricesPage implements OnInit {
   triphistory: any;
   cartypes: any;
   hasNoData: boolean;
-  constructor(private chatService: AvatarService, public loadingController: LoadingController, public modalCtrl: ModalController) { }
+  currencySymbol: string = '$';
+
+  constructor(
+    private chatService: AvatarService,
+    public loadingController: LoadingController,
+    public modalCtrl: ModalController,
+    private settingsService: SettingsService
+  ) { }
 
 
   ngOnInit() {
@@ -38,6 +46,12 @@ export class PricesPage implements OnInit {
         this.hasNoData = false;
       }
   })
+
+    this.settingsService.getSettings().subscribe(settings => {
+      if (settings && settings.currencySymbol) {
+        this.currencySymbol = settings.currencySymbol;
+      }
+    });
   }
 
 

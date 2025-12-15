@@ -11,6 +11,8 @@ interface Rider {
   Rider_phone: string;
   Rider_email: string;
   Rider_rating: number;
+  photoUrl?: string;
+  photoURL?: string;
 }
 
 @Component({
@@ -40,8 +42,14 @@ export class CustomersPage implements OnInit {
     this.hideSkeleton = true;
     
     this.chatService.getRiders().subscribe((d: Rider[]) => {
-      this.allRecords = d; // Store original data
-      this.records.data = d;
+      const normalized = d.map((rider: Rider) => ({
+        ...rider,
+        photoUrl: this.resolveRiderPhoto(rider)
+      }));
+
+      this.allRecords = normalized; // Store original data
+      this.records.data = [...normalized];
+      this.logRiderPhotoUrls(this.records.data);
       if (d.length === 0) {
         this.hasNoData = true;
         this.hideSkeleton = false;
@@ -122,4 +130,38 @@ export class CustomersPage implements OnInit {
   }
 
   ngOnInit() {}
+
+  private logRiderPhotoUrls(riders: Rider[]): void {
+    riders.forEach(rider => {
+      const photoPath = this.resolveRiderPhoto(rider) || 'N/A';
+      console.log(`Rider ${rider.Rider_id} photoUrl:`, photoPath);
+    });
+  }
+
+  private resolveRiderPhoto(rider: Rider): string {
+    const candidate = (
+      rider.photoUrl ||
+      rider.photoURL ||
+      rider.Rider_imgUrl ||
+      (rider as any)?.imageUrl ||
+      (rider as any)?.imgUrl ||
+      (rider as any)?.avatar ||
+      ''
+    ).trim();
+
+    if (!candidate) {
+      return '';
+    }
+
+    if (candidate.startsWith('gs://')) {
+      // Display placeholder for gs:// URLs until converted to https downloads
+      return '';
+    }
+
+    if (candidate.startsWith('http') || candidate.startsWith('data:image')) {
+      return candidate;
+    }
+
+    return '';
+  }
 }

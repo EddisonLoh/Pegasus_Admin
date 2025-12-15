@@ -32,14 +32,14 @@
           <ion-col>Price</ion-col>
         </ion-row>
 
-        <ion-row *ngFor="let trip of displayedTripHistory">
-          <ion-col>{{trip.Driver_name}}</ion-col>
-          <ion-col>{{trip.Driver_phone}}</ion-col>
+        <ion-row *ngFor="let trip of displayedTripHistory | slice:currentTripPage * pageSize:(currentTripPage + 1) * pageSize">
+          <ion-col>{{getDriverName(trip)}}</ion-col>
+          <ion-col>{{getDriverPhone(trip)}}</ion-col>
           <ion-col>{{trip.Rider_name}}</ion-col>
           <ion-col>{{trip.Rider_phone}}</ion-col>
-          <ion-col>{{trip.pickup}}</ion-col>
-          <ion-col>{{trip.dropoff}}</ion-col>
-          <ion-col>{{trip.price}}</ion-col>
+          <ion-col>{{getPickup(trip)}}</ion-col>
+          <ion-col>{{getDropoff(trip)}}</ion-col>
+          <ion-col>{{currencySymbol}}{{trip.price}}</ion-col>
         </ion-row>
       </ion-grid>
 
@@ -55,31 +55,33 @@
           <ion-col>Reason</ion-col>
         </ion-row>
 
-        <ion-row *ngFor="let trip of displayedCancelledHistory">
-          <ion-col>{{trip.Driver_name}}</ion-col>
-          <ion-col>{{trip.Driver_phone}}</ion-col>
+        <ion-row *ngFor="let trip of displayedCancelledHistory | slice:currentCancelledPage * pageSize:(currentCancelledPage + 1) * pageSize">
+          <ion-col>{{getDriverName(trip)}}</ion-col>
+          <ion-col>{{getDriverPhone(trip)}}</ion-col>
           <ion-col>{{trip.Rider_name}}</ion-col>
           <ion-col>{{trip.Rider_phone}}</ion-col>
-          <ion-col>{{trip.pickup}}</ion-col>
-          <ion-col>{{trip.dropoff}}</ion-col>
-          <ion-col>{{trip.price}}</ion-col>
+          <ion-col>{{getPickup(trip)}}</ion-col>
+          <ion-col>{{getDropoff(trip)}}</ion-col>
+          <ion-col>{{currencySymbol}}{{trip.price}}</ion-col>
           <ion-col>{{trip.reason}}</ion-col>
         </ion-row>
       </ion-grid>
 
-      <ion-infinite-scroll *ngIf="segmentModel === 'default'" (ionInfinite)="loadMoreTrips($any($event))">
-        <ion-infinite-scroll-content
-          loadingSpinner="bubbles"
-          loadingText="Loading more data...">
-        </ion-infinite-scroll-content>
-      </ion-infinite-scroll>
-
-      <ion-infinite-scroll *ngIf="segmentModel === 'segment'" (ionInfinite)="loadMoreCancelledTrips($any($event))">
-        <ion-infinite-scroll-content
-          loadingSpinner="bubbles"
-          loadingText="Loading more data...">
-        </ion-infinite-scroll-content>
-      </ion-infinite-scroll>
+      <ion-grid>
+        <ion-row class="ion-justify-content-between">
+          <ion-col size="12" class="ion-text-center">
+            <ion-button fill="clear" [disabled]="(segmentModel === 'default' ? currentTripPage : currentCancelledPage) === 0" (click)="previousPage()">
+              <ion-icon name="chevron-back"></ion-icon>
+            </ion-button>
+            <ion-text>
+              {{ (segmentModel === 'default' ? currentTripPage : currentCancelledPage) + 1 }} / {{ segmentModel === 'default' ? totalTripPages : totalCancelledPages }}
+            </ion-text>
+            <ion-button fill="clear" [disabled]="(segmentModel === 'default' ? (currentTripPage + 1) * pageSize >= displayedTripHistory.length : (currentCancelledPage + 1) * pageSize >= displayedCancelledHistory.length)" (click)="nextPage()">
+              <ion-icon name="chevron-forward"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
     </ion-card>
 
     <div class="no-data-container" *ngIf="!hasData">

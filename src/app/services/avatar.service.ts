@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Auth } from '@angular/fire/auth';
-import { collection, collectionData, CollectionReference, doc, docData, DocumentData, Firestore, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc } from '@angular/fire/firestore';
+import { collection, collectionData, CollectionReference, doc, docData, DocumentData, Firestore, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc, query, orderBy, where, getDocs } from '@angular/fire/firestore';
 import {
   getDownloadURL,
   ref,
   Storage,
   uploadString,
+  uploadBytes
 } from '@angular/fire/storage';
 import { Router } from '@angular/router';
 import { Photo } from '@capacitor/camera';
@@ -400,7 +401,16 @@ export class AvatarService {
  
    getMessage(uid) {
     const userDocRef = collection(this.firestore, `Messages/${uid}/messages`);
-    return collectionData(userDocRef);
+    const q = query(userDocRef, orderBy('createdAt', 'asc'));
+    return collectionData(q).pipe(
+      map((messages: any[]) => {
+        const currentUid = this.auth.currentUser?.uid;
+        return messages.map(msg => ({
+          ...msg,
+          myMsg: msg.from === currentUid
+        }));
+      })
+    );
   }
 
   getDocument(uid) {
@@ -428,39 +438,23 @@ export class AvatarService {
     return docData(userDocRef);
   }
   getTotalEarnings(): Observable<{ Earnings: number }> {
-  const driversRef = collection(this.firestore, 'Drivers');
-  return collectionData(driversRef, { idField: 'uid' }).pipe(
-    switchMap((drivers: any[]) => {
-      if (drivers.length === 0) {
-        return of({ Earnings: 0 });
-      }
-
-      // Create an array of observables for each driver's earnings subcollection
-      const earningsObservables = drivers.map(driver => {
-        const earningsRef = collection(this.firestore, `Drivers/${driver.uid}/Earnings`);
-        return collectionData(earningsRef);
-      });
-
-      // Combine all earnings observables
-      return combineLatest(earningsObservables).pipe(
-        map((allEarningsArrays: any[][]) => {
-          // Flatten and sum all earnings
-          let totalEarnings = 0;
-          allEarningsArrays.forEach(earningsArray => {
-            earningsArray.forEach(earning => {
-              totalEarnings += earning.amount || 0;
-            });
-          });
-          return { Earnings: totalEarnings };
-        })
-      );
-    })
-  );
-}
+    const driversRef = collection(this.firestore, 'Drivers');
+    return collectionData(driversRef, { idField: 'uid' }).pipe(
+      map((drivers: any[]) => {
+        let totalEarnings = 0;
+        drivers.forEach(driver => {
+          // Ensure we treat Earnings as a number
+          const driverEarnings = Number(driver.Earnings) || 0;
+          totalEarnings += driverEarnings;
+        });
+        return { Earnings: totalEarnings };
+      })
+    );
+  }
 
   getCartypes() {
     const userDocRef = collection(this.firestore, `Cartypes`);
-    return collectionData(userDocRef);
+    return collectionData(userDocRef, { idField: 'id' });
   }
 
   getPrices() {
@@ -469,8 +463,14 @@ export class AvatarService {
   }
 
   getDocuments() {
+    this.ensureDocumentNode();
     const userDocRef = collection(this.firestore, `Documents`);
     return collectionData(userDocRef);
+  }
+
+  private ensureDocumentNode(): void {
+    const defaultDocRef = doc(this.firestore, 'Documents', '_init');
+    void setDoc(defaultDocRef, { placeholder: true }, { merge: true });
   }
 
   getRoles() {
@@ -486,6 +486,16 @@ export class AvatarService {
   getDrivers(): Observable<any[]> {
     const driversRef = collection(this.firestore, 'Drivers');
     return collectionData(driversRef);
+  }
+
+  getDriverRatings(driverId: string): Observable<any[]> {
+    const ratingRef = collection(this.firestore, `Drivers/${driverId}/rating`);
+    return collectionData(ratingRef);
+  }
+
+  getDriverRatingCount(driverId: string): Observable<any[]> {
+    const ratingCountRef = collection(this.firestore, `Drivers/${driverId}/ratingCount`);
+    return collectionData(ratingCountRef);
   }
 
   getTrips(): Observable<any[]> {
@@ -544,8 +554,9 @@ async addChatMessage(msg, uid) {
   });
 }
 
-async createDocument(name, type, id, image, text) {
+async createDocument(name, type, id, image, text, targetUid?) {
   try {
+    const uid = targetUid || this.auth.currentUser.uid;
     const loc: docs = {
       name: name,
       type: type,
@@ -553,7 +564,7 @@ async createDocument(name, type, id, image, text) {
       image: image,
       text: text
     };
-    await setDoc(doc(this.firestore, "Drivers",  `${this.auth.currentUser.uid}/Documents/${name}`), { ...loc});
+    await setDoc(doc(this.firestore, "Drivers",  `${uid}/Documents/${name}`), { ...loc});
     return true;
   } catch (e) {
     // alert(e)
@@ -651,12 +662,36 @@ async DriverUpdateEarnings(amt, uid) {
   });
 }
 
-async DocumentSave(name, amt, s) {
+async updateDriverNumRides(numRides: number, uid: string) {
+  return await updateDoc(doc(this.firestore, `Drivers/${uid}`), {
+     Driver_num_rides: numRides,
+  });
+}
+
+async DocumentSave(name, type, content, description) {
   return await addDoc(collection(this.firestore, `Documents`), {
      name: name,
-     amount: amt,
-     type: s
+     type: type,
+     content: content,
+     description: description,
+     createdAt: serverTimestamp()
   });
+}
+
+async DocumentComponentUpdate(id, name, type, content, description) {
+  const docRef = doc(this.firestore, `Documents/${id}`);
+  return await updateDoc(docRef, {
+     name: name,
+     type: type,
+     content: content,
+     description: description
+  });
+}
+
+async uploadFile(file: Blob, path: string): Promise<string> {
+  const storageRef = ref(this.storage, path);
+  const result = await uploadBytes(storageRef, file);
+  return await getDownloadURL(result.ref);
 }
 
 
@@ -671,20 +706,38 @@ async PriceUpdate(name, amt, uid) {
 
 
 
-async CartypeSave(name, surcharge, mileage) {
+async CartypeSave(name,seats) {
   return await addDoc(collection(this.firestore, `Cartypes`), {
      name: name,
-     surcharge: surcharge,
-     mileage: mileage
+    seatNum: seats,
+    //  surcharge: surcharge,
+    //  mileage: mileage
   });
 }
 
-async CartypeUpdate(uid, name, surcharge, mileage) {
+async checkCartypeNameExists(name: string, excludeId?: string): Promise<boolean> {
+  const q = query(collection(this.firestore, 'Cartypes'), where('name', '==', name ));
+  const querySnapshot = await getDocs(q);
+  
+  if (querySnapshot.empty) {
+    return false;
+  }
+
+  if (excludeId) {
+    // If we are excluding an ID (updating), check if any of the found docs have a different ID
+    return querySnapshot.docs.some(doc => doc.id !== excludeId);
+  }
+
+  return true;
+}
+
+async CartypeUpdate(uid, name,seats) {
   const userDocRef = doc(this.firestore, `Cartypes/${uid}`)
   return await updateDoc(userDocRef, {
      name: name,
-     surcharge: surcharge,
-     mileage: mileage
+     seatNum: seats,
+    //  surcharge: surcharge,
+    //  mileage: mileage
   });
 }
 

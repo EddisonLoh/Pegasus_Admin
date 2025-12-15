@@ -23,6 +23,7 @@ export class AppComponent implements OnInit {
     { title: 'Documents', url: '/documents', icon: 'document-text', color: 'primary' },
     { title: 'Live Support', url: '/support', icon: 'chatbubbles', color: 'primary' },
     { title: 'Payout', url: '/payout', icon: 'wallet', color: 'primary' },
+    { title: 'General Settings', url: '/general-settings', icon: 'settings', color: 'primary' },
     // { title: 'Rider App', url: '/rider-app', icon: 'phone-portrait', color: 'primary' },
     // { title: 'Driver App', url: '/driver-app', icon: 'phone-landscape', color: 'primary' },
   ];

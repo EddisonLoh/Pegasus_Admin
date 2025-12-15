@@ -14,22 +14,22 @@
     <div class="form-container">
       <ion-item>
         <ion-label position="floating">Name</ion-label>
-        <ion-input formControlName="email" type="text" maxlength="50"></ion-input>
+        <ion-input formControlName="name" type="text" maxlength="50"></ion-input>
       </ion-item>
-
+<!-- 
       <ion-item>
         <ion-label position="floating">Surcharge</ion-label>
-        <ion-input formControlName="name" type="text" maxlength="100"></ion-input>
-      </ion-item>
+        <ion-input formControlName="surcharge" type="number" inputmode="decimal" maxlength="100"></ion-input>
+      </ion-item> -->
 
       <ion-item>
-        <ion-label position="floating">Mileage</ion-label>
-        <ion-input formControlName="address" type="text" maxlength="100"></ion-input>
+        <ion-label position="floating">Seats Number</ion-label>
+        <ion-input formControlName="seats" type="number" inputmode="decimal" maxlength="2" scroll="false"></ion-input>
       </ion-item>
 
       <div class="avatar-container">
         <ion-avatar (click)="changeImage()">
-          <img [src]="info?.image || profileImage || 'assets/placeholder-avatar.png'" alt="Vehicle Icon">
+          <img [src]="previewImage || info?.image || 'assets/imgs/car.svg'" alt="Vehicle Icon">
         </ion-avatar>
         <ion-label>Change Icon</ion-label>
       </div>

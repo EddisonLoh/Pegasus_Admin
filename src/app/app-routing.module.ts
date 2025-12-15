@@ -91,6 +91,12 @@ const routes: Routes = [
     data: { menuEnabled: true }
   },
   {
+    path: 'general-settings',
+    loadChildren: () =>
+      import('./pages/general-settings/general-settings.module').then((m) => m.GeneralSettingsPageModule),
+    data: { menuEnabled: true }
+  },
+  {
     path: '**',
     redirectTo: 'login'
   }

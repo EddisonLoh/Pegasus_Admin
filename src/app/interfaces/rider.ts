@@ -6,6 +6,7 @@ export interface Rider {
     Rider_email: string;
     Rider_phone: number;
     Rider_imgUrl: string;
+    photoUrl?: string;
     Rider_rating: number;
     Des_lat: number;
     Des_lng: number;

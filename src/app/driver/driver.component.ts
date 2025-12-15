@@ -114,7 +114,7 @@ export class DriverComponent implements OnInit {
       console.log(element);
       this.docs[index].image = image.dataUrl;
       this.overlay.showLoader('');
-      const bol = await this.avatar.createDocument(g.name, g.type, g.id, image.dataUrl, '');
+      const bol = await this.avatar.createDocument(g.name, g.type, g.id, image.dataUrl, '', this.info?.Driver_id);
       console.log(bol)
       this.overlay.hideLoader()
       } 
@@ -147,7 +147,7 @@ export class DriverComponent implements OnInit {
   }
 
   async chooseText(e, value) {
-    await this.avatar.createDocument(e.name, e.type, e.id, '', value.detail);
+    await this.avatar.createDocument(e.name, e.type, e.id, '', value.detail, this.info?.Driver_id);
   }
 
 
@@ -192,3 +192,6 @@ async EditNow(){
 
 
 }
+
+
+

@@ -20,7 +20,7 @@
       <ion-item>
         <ion-button class="country-code-btn" fill="clear" (click)="openCountrySearchModal()">
           <ion-icon name="globe-outline"></ion-icon>
-          {{ CountryCode || defaultCountryCode }}
+          {{  defaultCountryCode ||CountryCode }}
         </ion-button>
         <div id="sign-in-button"></div>
         <ion-input
@@ -51,6 +51,18 @@
           Continue
         </span>
         <ion-spinner *ngIf="approve2" name="crescent"></ion-spinner>
+      </ion-button>
+
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <ion-button expand="block" 
+        (click)="signInWithGoogle()"
+        class="google-button"
+        color="light">
+        <ion-icon slot="start" src="assets/icon/google.svg"></ion-icon>
+        Continue with Google
       </ion-button>
     </form>
   </div>

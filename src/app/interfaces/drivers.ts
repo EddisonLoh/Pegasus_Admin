@@ -25,5 +25,9 @@ export interface Drivers {
     onlineState: boolean;
     Earnings: number;
     Approved: boolean
+    //updates
+    notificationID?: string;
+    onesignalExternalId?: string;
+    fcmToken?: string;
 
 }

@@ -71,7 +71,7 @@
           </ion-col>
           <ion-col size="1.5">
             <div>Rides: {{driver.Driver_num_rides}}</div>
-            <div>Rating: {{driver.Driver_rating}}</div>
+            <div>Rating: {{driver.Driver_rating.toFixed(1)}}</div>
           </ion-col>
           <ion-col size="2">
             <ion-badge [color]="driver.onlineState ? 'success' : 'medium'">
@@ -163,8 +163,3 @@
   </div>
 </ion-content>
 
-<ion-fab vertical="bottom" horizontal="end" slot="fixed">
-  <ion-fab-button (click)="AddDriver()">
-    <ion-icon name="add"></ion-icon>
-  </ion-fab-button>
-</ion-fab>

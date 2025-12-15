@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { LoadingController } from '@ionic/angular';
+import { LoadingController, AlertController } from '@ionic/angular';
 import { AvatarService } from 'src/app/services/avatar.service';
+import { SettingsService } from 'src/app/services/settings.service';
 
 @Component({
   selector: 'app-payout',
@@ -15,10 +16,13 @@ export class PayoutPage implements OnInit {
   filteredRecords: any[] = [];
   currentPage = 0;
   pageSize = 5;
+  currencySymbol: string = '$';
   
   constructor(
     private chatService: AvatarService,
-    public loadingController: LoadingController
+    public loadingController: LoadingController,
+    private alertController: AlertController,
+    private settingsService: SettingsService
   ) { }
 
   async ionViewDidEnter() {
@@ -63,11 +67,37 @@ export class PayoutPage implements OnInit {
   }
 
   async gotoDocs(e) {
-    const loading = await this.loadingController.create();
-    await loading.present();
-    await this.chatService.DriverUpdateEarnings(e.Earnings + 100, e.Driver_id);
-    loading.dismiss();
+    const alert = await this.alertController.create({
+      header: 'Confirm Payout',
+      message: 'Are you sure you want to payout this driver? This will reset their earnings to 0.',
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel',
+          cssClass: 'secondary',
+          handler: () => {
+            console.log('Confirm Cancel');
+          }
+        }, {
+          text: 'Yes',
+          handler: async () => {
+            const loading = await this.loadingController.create();
+            await loading.present();
+            await this.chatService.DriverUpdateEarnings(0, e.Driver_id);
+            loading.dismiss();
+          }
+        }
+      ]
+    });
+
+    await alert.present();
   }
 
-  ngOnInit() {}
+  ngOnInit() {
+    this.settingsService.getSettings().subscribe(settings => {
+      if (settings && settings.currencySymbol) {
+        this.currencySymbol = settings.currencySymbol;
+      }
+    });
+  }
 }

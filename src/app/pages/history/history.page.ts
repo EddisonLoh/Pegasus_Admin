@@ -1,14 +1,21 @@
 import { Component, OnInit } from '@angular/core';
 import { NavController, InfiniteScrollCustomEvent } from '@ionic/angular';
 import { AvatarService } from 'src/app/services/avatar.service';
+import { SettingsService } from 'src/app/services/settings.service';
 
 interface Trip {
-  Driver_name: string;
-  Driver_phone: string;
+  Driver_name?: string;
+  Driver_phone?: string;
+  driverDetails?: {
+    Driver_name?: string;
+    Driver_phone?: string;
+  };
   Rider_name: string;
   Rider_phone: string;
-  pickup: string;
-  dropoff: string;
+  pickup?: string;
+  dropoff?: string;
+  Rider_Location?: string;
+  Rider_Destination?: string;
   price: number;
   reason?: string;
 }
@@ -22,6 +29,7 @@ export class HistoryPage implements OnInit {
   isLoading = false;
   hasData = false;
   segmentModel = "default";
+  currencySymbol: string = '$';
 
   tripHistory: Trip[] = [];
   cancelledHistory: Trip[] = [];
@@ -29,9 +37,9 @@ export class HistoryPage implements OnInit {
   displayedTripHistory: Trip[] = [];
   displayedCancelledHistory: Trip[] = [];
 
-  private pageSize = 10;
-  private currentTripPage = 0;
-  private currentCancelledPage = 0;
+  public pageSize = 10;
+  public currentTripPage = 0;
+  public currentCancelledPage = 0;
 
   skeletOns: {}[] = [{}, {}, {}, {}];
   hideSkeleton = true;
@@ -39,12 +47,19 @@ export class HistoryPage implements OnInit {
 
   constructor(
     private nav: NavController,
-    private chatService: AvatarService
+    private chatService: AvatarService,
+    private settingsService: SettingsService
   ) {}
 
   ngOnInit() {
     this.loadTripHistory();
     this.loadCancelledHistory();
+
+    this.settingsService.getSettings().subscribe(settings => {
+      if (settings && settings.currencySymbol) {
+        this.currencySymbol = settings.currencySymbol;
+      }
+    });
   }
 
   loadTripHistory() {
@@ -52,7 +67,7 @@ export class HistoryPage implements OnInit {
     this.chatService.getTrips().subscribe(
       (data: Trip[]) => {
         this.tripHistory = data;
-        this.displayedTripHistory = this.tripHistory.slice(0, this.pageSize);
+        this.displayedTripHistory = data;
         this.hasData = this.tripHistory.length > 0;
         this.hasNoData = !this.hasData;
         this.isLoading = false;
@@ -71,7 +86,7 @@ export class HistoryPage implements OnInit {
     this.chatService.getCancelledTrips().subscribe(
       (data: Trip[]) => {
         this.cancelledHistory = data;
-        this.displayedCancelledHistory = this.cancelledHistory.slice(0, this.pageSize);
+        this.displayedCancelledHistory = data;
         this.hasData = this.hasData || this.cancelledHistory.length > 0;
         this.hasNoData = !this.hasData;
         this.isLoading = false;
@@ -85,51 +100,73 @@ export class HistoryPage implements OnInit {
     );
   }
 
-  loadMoreTrips(event: InfiniteScrollCustomEvent) {
-    this.currentTripPage++;
-    const nextItems = this.tripHistory.slice(
-      this.currentTripPage * this.pageSize,
-      (this.currentTripPage + 1) * this.pageSize
-    );
-    this.displayedTripHistory.push(...nextItems);
-    event.target.complete();
-
-    if (this.displayedTripHistory.length >= this.tripHistory.length) {
-      event.target.disabled = true;
+  nextPage() {
+    if (this.segmentModel === 'default') {
+      if ((this.currentTripPage + 1) * this.pageSize < this.displayedTripHistory.length) {
+        this.currentTripPage++;
+      }
+    } else {
+      if ((this.currentCancelledPage + 1) * this.pageSize < this.displayedCancelledHistory.length) {
+        this.currentCancelledPage++;
+      }
     }
   }
 
-  loadMoreCancelledTrips(event: InfiniteScrollCustomEvent) {
-    this.currentCancelledPage++;
-    const nextItems = this.cancelledHistory.slice(
-      this.currentCancelledPage * this.pageSize,
-      (this.currentCancelledPage + 1) * this.pageSize
-    );
-    this.displayedCancelledHistory.push(...nextItems);
-    event.target.complete();
-
-    if (this.displayedCancelledHistory.length >= this.cancelledHistory.length) {
-      event.target.disabled = true;
+  previousPage() {
+    if (this.segmentModel === 'default') {
+      if (this.currentTripPage > 0) {
+        this.currentTripPage--;
+      }
+    } else {
+      if (this.currentCancelledPage > 0) {
+        this.currentCancelledPage--;
+      }
     }
   }
 
   applyFilter(event: any) {
     const filterValue = event.target.value.toLowerCase();
     if (this.segmentModel === 'default') {
+      this.currentTripPage = 0;
       this.displayedTripHistory = this.tripHistory.filter(trip =>
-        trip.Driver_name.toLowerCase().includes(filterValue) ||
+        this.getDriverName(trip).toLowerCase().includes(filterValue) ||
         trip.Rider_name.toLowerCase().includes(filterValue) ||
-        trip.pickup.toLowerCase().includes(filterValue) ||
-        trip.dropoff.toLowerCase().includes(filterValue)
+        this.getPickup(trip).toLowerCase().includes(filterValue) ||
+        this.getDropoff(trip).toLowerCase().includes(filterValue)
       );
     } else {
+      this.currentCancelledPage = 0;
       this.displayedCancelledHistory = this.cancelledHistory.filter(trip =>
-        trip.Driver_name.toLowerCase().includes(filterValue) ||
+        this.getDriverName(trip).toLowerCase().includes(filterValue) ||
         trip.Rider_name.toLowerCase().includes(filterValue) ||
-        trip.pickup.toLowerCase().includes(filterValue) ||
-        trip.dropoff.toLowerCase().includes(filterValue)
+        this.getPickup(trip).toLowerCase().includes(filterValue) ||
+        this.getDropoff(trip).toLowerCase().includes(filterValue)
       );
     }
+  }
+
+  get totalTripPages(): number {
+    return Math.ceil(this.displayedTripHistory.length / this.pageSize);
+  }
+
+  get totalCancelledPages(): number {
+    return Math.ceil(this.displayedCancelledHistory.length / this.pageSize);
+  }
+
+  getDriverName(trip: Trip): string {
+    return trip.Driver_name || trip.driverDetails?.Driver_name || 'Unknown';
+  }
+
+  getDriverPhone(trip: Trip): string {
+    return trip.Driver_phone || trip.driverDetails?.Driver_phone || 'Unknown';
+  }
+
+  getPickup(trip: Trip): string {
+    return trip.pickup || trip.Rider_Location || 'Unknown';
+  }
+
+  getDropoff(trip: Trip): string {
+    return trip.dropoff || trip.Rider_Destination || 'Unknown';
   }
 
   goBack() {

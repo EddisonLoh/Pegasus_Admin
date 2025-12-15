@@ -2,6 +2,7 @@ import { Component, ElementRef, OnInit, ViewChild, AfterViewInit, OnDestroy } fr
 import { NavController, MenuController, Platform } from '@ionic/angular';
 import { MapService } from '../services/map.service';
 import { AvatarService } from '../services/avatar.service';
+import { SettingsService } from '../services/settings.service';
 import { Auth } from '@angular/fire/auth';
 import { Geolocation, Position } from '@capacitor/geolocation';
 import { Chart, registerables } from 'chart.js';
@@ -26,6 +27,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
   numTrips: number = 0;
   coordinates: Position;
   LatLng: { lat: number; lng: number };
+  currencySymbol: string = '$';
 
   showMap: boolean = true;
   isMobile: boolean = false;
@@ -46,7 +48,8 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
     public map: MapService,
     private database: AvatarService,
     public nav: NavController,
-    private platform: Platform
+    private platform: Platform,
+    private settingsService: SettingsService
   ) {
     this.checkPlatformSize();
   }
@@ -66,6 +69,12 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
 
     // Initialize data subscriptions
     this.initializeDataSubscriptions();
+
+    this.settingsService.getSettings().subscribe(settings => {
+      if (settings && settings.currencySymbol) {
+        this.currencySymbol = settings.currencySymbol;
+      }
+    });
   }
 
   private setDefaultCoordinates() {
@@ -178,6 +187,7 @@ export class HomePage implements OnInit, AfterViewInit, OnDestroy {
 
   async ngAfterViewInit() {
     try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
       if (this.mapRef && this.mapRef.nativeElement) {
         await this.map.createMap(this.mapRef.nativeElement, this.coordinates);
         this.setupMapResize();

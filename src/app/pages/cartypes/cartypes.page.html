@@ -16,10 +16,10 @@
   <ng-container *ngIf="!hasNoData; else noDataTemplate">
     <div class="car-type-grid">
       <ion-card *ngFor="let item of cartypes" class="car-type-card">
-        <img [src]="item.image" alt="Vehicle image" />
+        <!-- <img [src]="item.image" alt="Vehicle image" /> -->
         <ion-card-header>
           <ion-card-title>{{item.name}}</ion-card-title>
-          <ion-card-subtitle>{{item.mileage}}</ion-card-subtitle>
+          <ion-card-subtitle>{{item.seatNum}} Seats</ion-card-subtitle>
         </ion-card-header>
         <ion-card-content>
           <ion-button fill="clear" (click)="EditBtn(item)">

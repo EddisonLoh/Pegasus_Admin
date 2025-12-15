@@ -477,3 +477,48 @@ ion-text,
 ion-input {
   color: var(--ion-color-dark);
 }
+
+// Divider styles
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 20px 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--ion-color-medium);
+  }
+
+  span {
+    padding: 0 12px;
+    color: var(--ion-color-medium);
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+// Google button styles
+.google-button {
+  --border-radius: 12px;
+  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: 52px;
+  font-size: 16px;
+  font-weight: 600;
+  --background: #ffffff;
+  --color: #3c4043;
+  border: 1px solid #dadce0;
+
+  ion-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+
+  &:hover {
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --background: #f8f9fa;
+  }
+}

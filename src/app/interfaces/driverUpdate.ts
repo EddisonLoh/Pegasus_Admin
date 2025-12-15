@@ -22,4 +22,8 @@ export interface DriverUpdate {
     Document: string;
     Driver_email: string;
     Driver_phone:number;
+    //updates
+    notificationID?: string;
+    onesignalExternalId?: string;
+    fcmToken?: string;
 }

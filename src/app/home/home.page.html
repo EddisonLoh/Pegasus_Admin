@@ -7,17 +7,7 @@
       <ion-title>
         <strong>Dashboard</strong>
       </ion-title>
-      <ion-buttons slot="end">
-        <ion-button color="primary" (click)="gotoProfile()">
-          <ion-avatar slot="icon-only" style="width: 32px; height: 32px;">
-            <img src="assets/avatar-placeholder.png" alt="Profile">
-          </ion-avatar>
-        </ion-button>
-        <ion-button color="primary">
-          <ion-badge color="danger" style="position: absolute; top: 0; right: 0;">3</ion-badge>
-          <ion-icon name="notifications-outline" size="large"></ion-icon>
-        </ion-button>
-      </ion-buttons>
+      
     </ion-toolbar>
   </ion-header>
 
@@ -64,7 +54,7 @@
           </ion-card-subtitle>
           <ion-card-title>
             <ion-text color="dark">
-              ${{earnings || 0}}
+              {{currencySymbol}} {{(earnings || 0).toFixed(2)}}
               <ion-note color="light" style="font-size: 1rem;">+12.5%</ion-note>
             </ion-text>
           </ion-card-title>

@@ -2,7 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { AlertController, LoadingController, ModalController, ModalOptions } from '@ionic/angular';
 import { DriverDocumentsComponent } from 'src/app/driver-documents/driver-documents.component';
 import { DriverComponent } from 'src/app/driver/driver.component';
+import { OnesignalService } from 'src/app/one-signal.service';
 import { AvatarService } from 'src/app/services/avatar.service';
+import { FcmService } from 'src/app/services/fcm.service';
+import { combineLatest } from 'rxjs';
 
 interface Driver {
   Approved: boolean;
@@ -25,6 +28,9 @@ interface Driver {
   onlineState: boolean;
   submissionDate: any;
   Document: boolean;
+  notificationID?: string;
+  onesignalExternalId?: string;
+  fcmToken?: string;
 }
 
 @Component({
@@ -40,9 +46,13 @@ export class DriversPage implements OnInit {
 
   records = { data: [] as Driver[] };
   records2 = { data: [] as Driver[] };
+  allRecords: Driver[] = [];
+  allRecords2: Driver[] = [];
 
   constructor(
     private chatService: AvatarService,
+    private onesignalService: OnesignalService,
+    private fcmService: FcmService,
     public modalCtrl: ModalController,
     private loadingController: LoadingController,
     public alertController: AlertController
@@ -51,16 +61,20 @@ export class DriversPage implements OnInit {
   async ionViewDidEnter() {
     this.hideSkeleton = true;
     const drivers = this.chatService.getDrivers();
-
+  
     drivers.subscribe((d: Driver[]) => {
       this.records.data = [];
       this.records2.data = [];
+      this.allRecords = [];
+      this.allRecords2 = [];
       
       d.forEach(element => {
         if (element.isApproved||element.Approved) {
           this.records.data.push(element);
+          this.allRecords.push(element);
         } else {
           this.records2.data.push(element);
+          this.allRecords2.push(element);
         }
       });
 
@@ -71,23 +85,37 @@ export class DriversPage implements OnInit {
     });
   }
 
-  applyFilter(event: any) {
-    const filterValue = event.target.value.toLowerCase();
-    this.records.data = this.records.data.filter(driver => 
-      driver.Driver_name.toLowerCase().includes(filterValue) ||
-      driver.Driver_phone.toLowerCase().includes(filterValue) ||
-      driver.Driver_email.toLowerCase().includes(filterValue)
-    );
-  }
+    applyFilter(event: any) {
+    
+      const filterValue = event.target.value.toLowerCase();
 
-  applyFilter2(event: any) {
-    const filterValue = event.target.value.toLowerCase();
-    this.records2.data = this.records2.data.filter(driver => 
-      driver.Driver_name.toLowerCase().includes(filterValue) ||
-      driver.Driver_phone.toLowerCase().includes(filterValue) ||
-      driver.Driver_email.toLowerCase().includes(filterValue)
-    );
-  }
+      if (!filterValue) {
+        this.records.data = [...this.allRecords];
+        return;
+      }
+
+      this.records.data = this.allRecords.filter(driver => 
+        (driver.Driver_name && driver.Driver_name.toLowerCase().includes(filterValue)) ||
+        (driver.Driver_phone && driver.Driver_phone.toLowerCase().includes(filterValue)) ||
+        (driver.Driver_email && driver.Driver_email.toLowerCase().includes(filterValue))
+      );
+    }
+
+    applyFilter2(event: any) {
+    
+      const filterValue = event.target.value.toLowerCase();
+
+      if (!filterValue) {
+        this.records2.data = [...this.allRecords2];
+        return;
+      }
+
+      this.records2.data = this.allRecords2.filter(driver => 
+        (driver.Driver_name && driver.Driver_name.toLowerCase().includes(filterValue)) ||
+        (driver.Driver_phone && driver.Driver_phone.toLowerCase().includes(filterValue)) ||
+        (driver.Driver_email && driver.Driver_email.toLowerCase().includes(filterValue))
+      );
+    }
 
   async AddDriver() {
     const options: ModalOptions = {
@@ -134,22 +162,19 @@ export class DriversPage implements OnInit {
     const loading = await this.loadingController.create();
     await loading.present();
 
-    const targetIsApproved = !(driver.isApproved || driver.Approved);
-    const action = targetIsApproved ? 'Approved' : 'Disapproved';
-
     try {
-      await this.chatService.UpdateDriverApprove(targetIsApproved, targetIsApproved, driver.Driver_id);
+      const nextIsApproved = !driver.isApproved;
+      const nextApprovedFlag = !driver.Approved;
 
-      driver.isApproved = targetIsApproved;
-      driver.Approved = targetIsApproved;
+      await this.chatService.UpdateDriverApprove(nextIsApproved, nextApprovedFlag, driver.Driver_id);
+      driver.isApproved = nextIsApproved;
+      driver.Approved = nextApprovedFlag;
 
-      if (targetIsApproved) {
-        await (this.chatService as any).notifyDriverStatusUpdate?.(driver.Driver_id, 'approved');
-      }
-
+     // this.sendStatusNotification(driver, nextIsApproved);
+      
       const alert = await this.alertController.create({
-        header: `Driver ${action}`,
-        message: `${driver.Driver_name} has been ${action.toLowerCase()} successfully.`,
+        header: `Driver ${nextIsApproved ? 'Approved' : 'Disapproved'}`,
+        message: `${driver.Driver_name} has been ${nextIsApproved ? 'approved' : 'disapproved'} successfully.`,
         buttons: ['OK'],
       });
       await alert.present();
@@ -166,4 +191,39 @@ export class DriversPage implements OnInit {
   }
 
   ngOnInit() {}
+
+  private sendStatusNotification(element: Driver, isApproved: boolean) {
+    const statusText = isApproved ? 'approved' : 'disapproved';
+    const body = `Hi ${element.Driver_name || 'driver'}, your account has been ${statusText}.`;
+    const dataPayload = {
+      driverId: element.Driver_id,
+      status: statusText,
+    };
+
+    let delivered = false;
+
+    if (element.fcmToken) {
+      this.fcmService
+        .sendToToken(element.fcmToken, 'Driver Status Updated', body, dataPayload)
+        .subscribe({
+          next: () => {},
+          error: (notificationError) => console.warn('Failed to send FCM notification', notificationError),
+        });
+      delivered = true;
+    }
+
+    const onesignalTarget = element.notificationID || element.onesignalExternalId || element.Driver_id;
+    if (onesignalTarget) {
+      this.onesignalService
+        .sendNotification(body, 'Driver Status Updated', dataPayload, onesignalTarget)
+        .subscribe({
+          error: (notificationError) => console.warn('Failed to send OneSignal notification', notificationError),
+        });
+      delivered = true;
+    }
+
+    if (!delivered) {
+      console.warn('Driver has no push identifiers configured', element.Driver_id);
+    }
+  }
 }

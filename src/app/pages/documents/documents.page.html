@@ -25,14 +25,26 @@
               </ion-card-header>
               <ion-card-content>
                 <p>{{item.description}}</p>
-                <ion-button fill="clear" (click)="EditBtn(item)">
-                  <ion-icon slot="start" name="create-outline"></ion-icon>
-                  Edit
-                </ion-button>
-                <ion-button fill="clear" color="danger" (click)="Delete(item)">
-                  <ion-icon slot="start" name="trash-outline"></ion-icon>
-                  Delete
-                </ion-button>
+                
+                <div class="ion-margin-top" *ngIf="item.type !== 'text'">
+                   <ion-button fill="outline" size="small" [href]="item.content" target="_blank">
+                     View {{ item.type | titlecase }}
+                   </ion-button>
+                </div>
+                <div class="ion-margin-top" *ngIf="item.type === 'text'">
+                   <p><strong>Content:</strong> {{ item.content | slice:0:50 }}{{ item.content.length > 50 ? '...' : '' }}</p>
+                </div>
+
+                <div class="ion-margin-top">
+                  <ion-button fill="clear" (click)="EditBtn(item)">
+                    <ion-icon slot="start" name="create-outline"></ion-icon>
+                    Edit
+                  </ion-button>
+                  <ion-button fill="clear" color="danger" (click)="Delete(item)">
+                    <ion-icon slot="start" name="trash-outline"></ion-icon>
+                    Delete
+                  </ion-button>
+                </div>
               </ion-card-content>
             </ion-card>
           </ion-col>

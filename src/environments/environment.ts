@@ -19,6 +19,10 @@ export const environment = {
         restApiKey: 'YTM3ODgyMzQtNjg1ZC00YTQwLWJmNjItNTA4M2VkMmY3MDdl',
         android_channel_id: ''
     },
+    fcm: {
+        serverKey: '',
+        senderId: '187797802273'
+    },
     serverUrl: "https://payment-server-wheat.vercel.app/",
     CountryJson: [
         {

@@ -8,46 +8,76 @@ import { AvatarService } from '../services/avatar.service';
   styleUrls: ['./driver-documents.component.scss'],
 })
 export class DriverDocumentsComponent implements OnInit {
- @Input() info;
-  skeletOns: {}[];
-  hideSkeleton: boolean;
-  drivers: any;
-  hasNoData: boolean;
-  segmentModel = "default";
-  triphistory: any;
-  public rows: any[];
-  redy: number = 3;
-  cancelledhistory: any;
-  records: any;
-  constructor(private chatService: AvatarService, public modalCtrl: ModalController, private loadingController: LoadingController, public alertController: AlertController) { }
- 
+  @Input() info: any;
+  records: any[] = [];
+  isLoading: boolean = true;
+  hasNoData: boolean = false;
+  driverName: string = '';
+
+  constructor(
+    private chatService: AvatarService,
+    public modalCtrl: ModalController,
+    private loadingController: LoadingController,
+    public alertController: AlertController
+  ) { }
+
   ngOnInit(): void {
-    console.log(this.info);
+    this.driverName = this.info?.Driver_name || 'Driver';
+    this.loadDocuments();
   }
 
+  loadDocuments() {
+    this.isLoading = true;
+    if (!this.info?.Driver_id) {
+      this.isLoading = false;
+      this.hasNoData = true;
+      return;
+    }
 
-  async ionViewDidEnter() {
-    this.skeletOns = [
-      {},{},{},{}
-    ]
+    this.chatService.getDocument(this.info.Driver_id).subscribe({
+      next: (docs: any[]) => {
+        this.records = docs || [];
+        this.hasNoData = this.records.length === 0;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading documents:', err);
+        this.records = [];
+        this.hasNoData = true;
+        this.isLoading = false;
+      }
+    });
+  }
 
-    this.drivers = (this.chatService.getDocument(this.info.Driver_id))
-    this.records = [];
-  this.drivers.subscribe((d)=>{
-   
-    this.records = d;
-    console.log(d);
-    d.forEach(element => {
-    
-     console.log(element);
-   });
-  })
+  closeModal() {
+    this.modalCtrl.dismiss();
+  }
 
-}
+  openDocument(url: string) {
+    window.open(url, '_blank');
+  }
 
-closeModal(){
-  this.modalCtrl.dismiss();
-}
+  getDocumentIcon(type: string): string {
+    switch (type) {
+      case 'image':
+        return 'image-outline';
+      case 'pdf':
+        return 'document-outline';
+      case 'text':
+      default:
+        return 'document-text-outline';
+    }
+  }
 
-
+  getStatusColor(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return 'success';
+      case 'rejected':
+        return 'danger';
+      case 'pending':
+      default:
+        return 'warning';
+    }
+  }
 }

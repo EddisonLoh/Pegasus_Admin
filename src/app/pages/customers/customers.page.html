@@ -22,7 +22,7 @@
       <ion-item-sliding *ngFor="let rider of records.data">
         <ion-item>
           <ion-avatar slot="start">
-            <img [src]="rider.Rider_imgUrl || 'assets/default-avatar.png'" alt="Rider avatar">
+            <img [src]="rider.photoUrl || rider.Rider_imgUrl || 'assets/imgs/empty.svg'" alt="Rider avatar">
           </ion-avatar>
           <ion-label>
             <h2>{{rider.Rider_name}}</h2>

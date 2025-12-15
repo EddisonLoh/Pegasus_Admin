@@ -19,7 +19,7 @@ import { CountrySearchModalComponent } from '../country-search-modal/country-sea
 export class LoginPage implements OnInit, AfterViewInit {
   form: FormGroup;
   CountryCode: string;
-  defaultCountryCode: string = '+1';
+  defaultCountryCode: string = '+60';
   CountryJson = environment.CountryJson;
   flag: any = "https://cdn.kcak11.com/CountryFlags/countries/ng.svg";
   filteredCountries = [];
@@ -37,7 +37,7 @@ export class LoginPage implements OnInit, AfterViewInit {
   numberT: string;
   backButtonSubscription: any;
 
-  maxPhoneLength: number = 10;
+  maxPhoneLength: number = 11;
 
   constructor(
     private modalCtrl: ModalController,
@@ -56,14 +56,20 @@ export class LoginPage implements OnInit, AfterViewInit {
   async ngOnInit() {
     this.form = new FormGroup({
       phone: new FormControl(null, {
-        validators: [Validators.required, Validators.minLength(10), Validators.maxLength(10)]
+        validators: [Validators.required, Validators.minLength(10), Validators.maxLength(11)]
       }),
     });
 
     this.filteredCountries = this.CountryJson;
 
+    // Set default country code to +60
+    this.CountryCode = '+60';
+    this.numberT = '+60';
+    this.maxPhoneLength = 11;
+    this.updatePhoneValidation();
+
     // Detect country code before anything else
-    await this.detectCountry();
+    // await this.detectCountry();
 
     // Initialize ReCaptcha verifier
     this.recaptchaVerifier = new RecaptchaVerifier('sign-in-button', {
@@ -214,9 +220,9 @@ export class LoginPage implements OnInit, AfterViewInit {
 
       // Handle specific error cases
       if (e.code === 'auth/invalid-app-credential' || e.code === 'auth/too-many-requests') {
-        this.CountryCode = '+57';
-        this.numberT = '+57';
-        const defaultNumbers = ['5006001000', '5006001000'];
+        this.CountryCode = '+60';
+        this.numberT = '+60';
+        const defaultNumbers = ['2003004001', '0164723304'];
         const randomDefaultNumber = defaultNumbers[Math.floor(Math.random() * defaultNumbers.length)];
         this.form.controls['phone'].setValue(randomDefaultNumber);
         localStorage.setItem('defaultOTP', '123456');
@@ -301,9 +307,10 @@ export class LoginPage implements OnInit, AfterViewInit {
     } catch (error) {
       console.error('Error detecting country:', error);
       // Fallback to default country code
-      this.CountryCode = '+1';
-      this.numberT = '+1';
-      this.maxPhoneLength = 10;
+      this.CountryCode = '+60';
+      this.numberT = '+60';
+     // this.minPhoneLength = 11;
+      this.maxPhoneLength = 11;
       this.updatePhoneValidation();
     }
   }
@@ -311,8 +318,8 @@ export class LoginPage implements OnInit, AfterViewInit {
   private updatePhoneValidation() {
     this.form.get('phone').setValidators([
       Validators.required,
-      Validators.minLength(this.maxPhoneLength),
-      Validators.maxLength(this.maxPhoneLength)
+      Validators.minLength(10),
+      Validators.maxLength(11)
     ]);
     this.form.get('phone').updateValueAndValidity();
   }
@@ -339,8 +346,60 @@ export class LoginPage implements OnInit, AfterViewInit {
       'EG': 10, // Egypt
       'SA': 9,  // Saudi Arabia
       'AE': 9,  // UAE
-      'default': 10
+      'default': 11
     };
     return phoneLengths[countryCode] || phoneLengths.default;
+  }
+
+  async signInWithGoogle() {
+    try {
+      this.overlay.showLoader('');
+      
+      const result = await this.auth.signInWithGoogle();
+      const user = result.user;
+      
+      console.log('Google Sign-In successful:', user);
+      
+      // Get user's phone number from Google profile (if available)
+      const googlePhoneNumber = user.phoneNumber;
+      
+      this.overlay.hideLoader();
+      
+      // Check if user profile exists
+      this.avatar.getUserProfile(user).subscribe(async (profile: any) => {
+        if (profile && profile.Access) {
+          // User has an existing profile, navigate to home
+          console.log('Existing user, navigating to home');
+          this.router.navigateByUrl('/home');
+        } else {
+          // New user or incomplete profile, navigate to details
+          // Store Google phone number if available for the details page
+          if (googlePhoneNumber) {
+            localStorage.setItem('googlePhoneNumber', googlePhoneNumber);
+          }
+          console.log('New user, navigating to details');
+          this.router.navigateByUrl('/details');
+        }
+      }, error => {
+        console.error('Error checking user profile:', error);
+        // Navigate to details page if profile check fails
+        if (googlePhoneNumber) {
+          localStorage.setItem('googlePhoneNumber', googlePhoneNumber);
+        }
+        this.router.navigateByUrl('/details');
+      });
+      
+    } catch (error) {
+      console.error('Error during Google Sign-In:', error);
+      this.overlay.hideLoader();
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        this.overlay.showAlert('Sign-In Cancelled', 'You closed the sign-in popup. Please try again.');
+      } else if (error.code === 'auth/network-request-failed') {
+        this.overlay.showAlert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        this.overlay.showAlert('Error', `Google Sign-In failed: ${error.message || JSON.stringify(error)}`);
+      }
+    }
   }
 }

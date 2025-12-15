@@ -12,11 +12,11 @@ import { AvatarService } from 'src/app/services/avatar.service';
 export class DocumentsPage implements OnInit {
 
   triphistory: any;
-  hasNoData: boolean;
-  hideSkeleton: boolean;
-  cartypes: any [];
+  hasNoData = false;
+  hideSkeleton = true;
+  cartypes: any[] = [];
   skeletOns: {}[];
-  isLoading: boolean;
+  isLoading = true;
   constructor(private chatService: AvatarService, public loadingController: LoadingController, public modalCtrl: ModalController) { }
 
   ngOnInit() {
@@ -24,22 +24,29 @@ export class DocumentsPage implements OnInit {
       {},{},{},{}
     ]
 
+    this.loadDocuments();
+  }
+
+  private loadDocuments() {
     this.hideSkeleton = true;
-    this.triphistory = (this.chatService.getDocuments())
-    this.triphistory.subscribe((d)=>{
+    this.isLoading = true;
 
-      console.log(d);
-
-     this.cartypes =d;
-      if (d.length == 0){
+    this.triphistory = this.chatService.getDocuments();
+    this.triphistory.subscribe({
+      next: (d: any[]) => {
+        this.cartypes = d || [];
+        this.hasNoData = this.cartypes.length === 0;
+        this.hideSkeleton = false;
+        this.isLoading = false;
+      },
+      error: (err: unknown) => {
+        console.error('Failed to load documents', err);
+        this.cartypes = [];
         this.hasNoData = true;
         this.hideSkeleton = false;
-      }else{
-        this.hideSkeleton = false;
-        this.hasNoData = false;
+        this.isLoading = false;
       }
-      this.isLoading = false;
-  })
+    });
   }
 
 
